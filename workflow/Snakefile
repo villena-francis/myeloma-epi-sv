@@ -1,11 +1,3 @@
-"""
-dorado basecall
-
-pycoQC
-
-qc filter
-"""
-
 DORADO_BIN="dorado"
 
 configfile:"config/config.yaml"
@@ -39,7 +31,8 @@ rule qsfilter:
     input: "results/basecall/{sampleid}/{basecaller}.bam"
     output: "results/qsfilter/{sampleid}/{basecaller}_{cmp}_{qscore}.bam"
     params:
-        cmp=getcmp
+        cmp=getcmp,
+        qscore=lambda wc: wc.qscore.lstrip("0")
     shell:"""
-        samtools view -e '[qs]{params.cmp}{wildcards.qscore}' > {output}
+        samtools view -e '[qs]{params.cmp}{params.qscore}' > {output}
     """
