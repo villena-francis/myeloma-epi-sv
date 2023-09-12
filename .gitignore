@@ -1,0 +1,13 @@
+!.gitignore
+__pycache__/
+config.yaml
+tmp/
+_old/
+results/
+logs/
+resources/**
+!resources/*
+!resources/*/.gitkeep
+.snakemake*
+.*.swp
+*.fai

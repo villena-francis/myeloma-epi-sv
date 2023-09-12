@@ -1,0 +1,3 @@
+paths:
+  pod5: "/tmp"
+  model: "/path/model/"

@@ -1,0 +1,45 @@
+"""
+dorado basecall
+
+pycoQC
+
+qc filter
+"""
+
+DORADO_BIN="dorado"
+
+configfile:"config/config.yaml"
+
+rule main:
+    input: [f"results/qsfilter/{sampleid}/dorado_gt_08.bam" for sampleid in ['mysample']]
+
+rule basecall_dorado:
+    input: config["paths"]["pod5"]
+    output: "results/basecall/{sampleid}/dorado.bam"
+    params:
+        bin=DORADO_BIN,
+        model=config["paths"]["model"]
+    shell:"""
+        {params.bin} basecaller {params.model} {input} > {output}
+    """
+
+def getcmp(wc):
+    if wc.cmp == "ge":
+        return ">="
+    elif wc.cmp == "gt":
+        return ">"
+    elif wc.cmp == "le":
+        return "<="
+    elif wc.cmp == "lt":
+        return "<"
+    else:
+        raise ValueError(f"Operator {wc.cmp} not recognised")
+
+rule qsfilter:
+    input: "results/basecall/{sampleid}/{basecaller}.bam"
+    output: "results/qsfilter/{sampleid}/{basecaller}_{cmp}_{qscore}.bam"
+    params:
+        cmp=getcmp
+    shell:"""
+        samtools view -e '[qs]{params.cmp}{wildcards.qscore}' > {output}
+    """
