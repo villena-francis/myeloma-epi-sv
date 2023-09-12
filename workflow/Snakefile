@@ -1,18 +1,22 @@
-DORADO_BIN="dorado"
-
 configfile:"config/config.yaml"
 
+def input_main(wc):
+    for sid in ['mysample']:
+        for bc in config["basecallers"]:
+            for mod in config["basecallers"][bc]["models"]:
+                yield f"results/qsfilter/{sid}/dorado_{mod}_gt_08.bam" 
+
 rule main:
-    input: [f"results/qsfilter/{sampleid}/dorado_gt_08.bam" for sampleid in ['mysample']]
+    input: input_main
 
 rule basecall_dorado:
     input: config["paths"]["pod5"]
-    output: "results/basecall/{sampleid}/dorado.bam"
+    output: "results/basecall/{sampleid}/dorado_{model}.bam"
     params:
-        bin=DORADO_BIN,
-        model=config["paths"]["model"]
+        bin=config["basecallers"]["dorado"]["bin"],
+        modelspath=config["paths"]["models"]
     shell:"""
-        {params.bin} basecaller {params.model} {input} > {output}
+        {params.bin} basecaller {params.modelspath}/{wildcards.model} {input} > {output}
     """
 
 def getcmp(wc):
@@ -28,11 +32,11 @@ def getcmp(wc):
         raise ValueError(f"Operator {wc.cmp} not recognised")
 
 rule qsfilter:
-    input: "results/basecall/{sampleid}/{basecaller}.bam"
-    output: "results/qsfilter/{sampleid}/{basecaller}_{cmp}_{qscore}.bam"
+    input: "results/basecall/{sampleid}/{basecaller}_{model}.bam"
+    output: "results/qsfilter/{sampleid}/{basecaller}_{model}_{cmp}_{qscore}.bam"
     params:
         cmp=getcmp,
         qscore=lambda wc: wc.qscore.lstrip("0")
     shell:"""
-        samtools view -e '[qs]{params.cmp}{params.qscore}' > {output}
+        samtools view -e '[qs]{params.cmp}{params.qscore}' {input} > {output}
     """
