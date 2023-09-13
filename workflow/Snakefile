@@ -2,6 +2,13 @@ import os
 
 configfile:"config/config.yaml"
 
+def get_resource(rule,resource):
+    try:
+        return config["resources"][rule][resource]
+    except KeyError:
+        return config["resources"]["default"][resource]
+
+
 try:
     config["paths"]["models"] = os.environ['ONT_BC_MODELS']
 except KeyError:
@@ -22,6 +29,12 @@ rule basecall_dorado:
     params:
         bin=config["basecallers"]["dorado"]["bin"],
         modelspath=config["paths"]["models"]
+    threads: get_resource("basecall_dorado","threads")
+    resources:
+        mem_mb=get_resource("basecall_dorado","mem_mb"),
+        runtime=get_resource("basecall_dorado","runtime"),
+        slurm_partition=get_resource("basecall_dorado","partition"),
+        slurm_extra=get_resource("basecall_dorado","slurm_extra")
     shell:"""
         {params.bin} basecaller {params.modelspath}/{wildcards.model} {input} > {output}
     """
@@ -44,6 +57,11 @@ rule qsfilter:
     params:
         cmp=getcmp,
         qscore=lambda wc: wc.qscore.lstrip("0")
+    threads: get_resource("qsfilter","threads")
+    resources:
+        mem_mb=get_resource("qsfilter","mem_mb"),
+        runtime=get_resource("qsfilter","runtime"),
+        slurm_partition=get_resource("qsfilter","partition")
     shell:"""
         samtools view -e '[qs]{params.cmp}{params.qscore}' {input} > {output}
     """
