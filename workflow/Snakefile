@@ -84,7 +84,7 @@ rule qsfilter:
         runtime=get_resource("qsfilter", "runtime"),
         slurm_partition=get_resource("qsfilter", "partition"),
     conda:
-        "envs/pycoqc.yaml"
+        "envs/samtools.yaml"
     shell:
         """
         samtools view -e '[qs]{params.cmp}{params.qscore}' {input} > {output} 2> {log}
