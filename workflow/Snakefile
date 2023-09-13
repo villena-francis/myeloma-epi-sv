@@ -62,6 +62,7 @@ rule qsfilter:
         mem_mb=get_resource("qsfilter","mem_mb"),
         runtime=get_resource("qsfilter","runtime"),
         slurm_partition=get_resource("qsfilter","partition")
+    conda: "envs/pycoqc.yaml"
     shell:"""
         samtools view -e '[qs]{params.cmp}{params.qscore}' {input} > {output}
     """
