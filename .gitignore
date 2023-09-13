@@ -1,6 +1,8 @@
 !.gitignore
 __pycache__/
-config.yaml
+!config/config.*.yaml.example
+config/config.*.yaml
+config/config.yaml
 tmp/
 _old/
 results/
