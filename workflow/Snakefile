@@ -21,7 +21,8 @@ def input_main(wc):
     for sid in config["samples"]:
         for bc in config["basecallers"]:
             for mod in config["basecallers"][bc]["models"]:
-                yield f"results/qsfilter/{sid}/dorado_{mod}_gt_08.bam"
+                for filt in config["filters"]:
+                    yield f"results/qsfilter/{sid}/dorado_{mod}_{filt}.bam"
 
 
 rule main:

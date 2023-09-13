@@ -1,6 +1,10 @@
 paths:
   models: "/path/to/models"
 
+filters:
+    - ge_08
+    - lt_08
+
 samples:
     sample1:
         pod5: "/path/to/pod5s"
