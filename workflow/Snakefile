@@ -1,8 +1,10 @@
 import os
 
-configfile:"config/config.yaml"
 
-def get_resource(rule,resource):
+configfile: "config/config.yaml"
+
+
+def get_resource(rule, resource):
     try:
         return config["resources"][rule][resource]
     except KeyError:
@@ -10,38 +12,46 @@ def get_resource(rule,resource):
 
 
 try:
-    config["paths"]["models"] = os.environ['ONT_BC_MODELS']
+    config["paths"]["models"] = os.environ["ONT_BC_MODELS"]
 except KeyError:
     pass
+
 
 def input_main(wc):
     for sid in config["samples"]:
         for bc in config["basecallers"]:
             for mod in config["basecallers"][bc]["models"]:
-                yield f"results/qsfilter/{sid}/dorado_{mod}_gt_08.bam" 
+                yield f"results/qsfilter/{sid}/dorado_{mod}_gt_08.bam"
+
 
 rule main:
-    input: input_main
+    input:
+        input_main,
+
 
 rule basecall_dorado:
-    input: lambda wc: config["samples"][wc.sampleid]["pod5"]
-    output: "results/basecall/{sampleid}/dorado_{model}.bam"
+    input:
+        lambda wc: config["samples"][wc.sampleid]["pod5"],
+    output:
+        "results/basecall/{sampleid}/dorado_{model}.bam",
     log:
-        "logs/basecall_dorado/{sampleid}/dorado_{model}.log"
+        "logs/basecall_dorado/{sampleid}/dorado_{model}.log",
     benchmark:
         "logs/basecall_dorado/{sampleid}/dorado_{model}.bmk"
     params:
         bin=config["basecallers"]["dorado"]["bin"],
-        modelspath=config["paths"]["models"]
-    threads: get_resource("basecall_dorado","threads")
+        modelspath=config["paths"]["models"],
+    threads: get_resource("basecall_dorado", "threads")
     resources:
-        mem_mb=get_resource("basecall_dorado","mem_mb"),
-        runtime=get_resource("basecall_dorado","runtime"),
-        slurm_partition=get_resource("basecall_dorado","partition"),
-        slurm_extra=get_resource("basecall_dorado","slurm_extra")
-    shell:"""
+        mem_mb=get_resource("basecall_dorado", "mem_mb"),
+        runtime=get_resource("basecall_dorado", "runtime"),
+        slurm_partition=get_resource("basecall_dorado", "partition"),
+        slurm_extra=get_resource("basecall_dorado", "slurm_extra"),
+    shell:
+        """
         {params.bin} basecaller {params.modelspath}/{wildcards.model} {input} > {output} 2> {log}
     """
+
 
 def getcmp(wc):
     if wc.cmp == "ge":
@@ -55,22 +65,27 @@ def getcmp(wc):
     else:
         raise ValueError(f"Operator {wc.cmp} not recognised")
 
+
 rule qsfilter:
-    input: "results/basecall/{sampleid}/{basecaller}_{model}.bam"
-    output: "results/qsfilter/{sampleid}/{basecaller}_{model}_{cmp}_{qscore}.bam"
+    input:
+        "results/basecall/{sampleid}/{basecaller}_{model}.bam",
+    output:
+        "results/qsfilter/{sampleid}/{basecaller}_{model}_{cmp}_{qscore}.bam",
     log:
-        "logs/qsfilter/{sampleid}/{basecaller}_{model}_{cmp}_{qscore}.log"
+        "logs/qsfilter/{sampleid}/{basecaller}_{model}_{cmp}_{qscore}.log",
     benchmark:
         "logs/qsfilter/{sampleid}/{basecaller}_{model}_{cmp}_{qscore}.bmk"
     params:
         cmp=getcmp,
-        qscore=lambda wc: wc.qscore.lstrip("0")
-    threads: get_resource("qsfilter","threads")
+        qscore=lambda wc: wc.qscore.lstrip("0"),
+    threads: get_resource("qsfilter", "threads")
     resources:
-        mem_mb=get_resource("qsfilter","mem_mb"),
-        runtime=get_resource("qsfilter","runtime"),
-        slurm_partition=get_resource("qsfilter","partition")
-    conda: "envs/pycoqc.yaml"
-    shell:"""
+        mem_mb=get_resource("qsfilter", "mem_mb"),
+        runtime=get_resource("qsfilter", "runtime"),
+        slurm_partition=get_resource("qsfilter", "partition"),
+    conda:
+        "envs/pycoqc.yaml"
+    shell:
+        """
         samtools view -e '[qs]{params.cmp}{params.qscore}' {input} > {output} 2> {log}
     """
