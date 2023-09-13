@@ -1,4 +1,11 @@
+import os
+
 configfile:"config/config.yaml"
+
+try:
+    config["paths"]["models"] = os.environ['ONT_BC_MODELS']
+except KeyError:
+    pass
 
 def input_main(wc):
     for sid in ['mysample']:
