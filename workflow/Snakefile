@@ -26,6 +26,10 @@ rule main:
 rule basecall_dorado:
     input: lambda wc: config["samples"][wc.sampleid]["pod5"]
     output: "results/basecall/{sampleid}/dorado_{model}.bam"
+    log:
+        "logs/basecall_dorado/{sampleid}/dorado_{model}.log"
+    benchmark:
+        "logs/basecall_dorado/{sampleid}/dorado_{model}.bmk"
     params:
         bin=config["basecallers"]["dorado"]["bin"],
         modelspath=config["paths"]["models"]
@@ -36,7 +40,7 @@ rule basecall_dorado:
         slurm_partition=get_resource("basecall_dorado","partition"),
         slurm_extra=get_resource("basecall_dorado","slurm_extra")
     shell:"""
-        {params.bin} basecaller {params.modelspath}/{wildcards.model} {input} > {output}
+        {params.bin} basecaller {params.modelspath}/{wildcards.model} {input} > {output} 2> {log}
     """
 
 def getcmp(wc):
@@ -54,6 +58,10 @@ def getcmp(wc):
 rule qsfilter:
     input: "results/basecall/{sampleid}/{basecaller}_{model}.bam"
     output: "results/qsfilter/{sampleid}/{basecaller}_{model}_{cmp}_{qscore}.bam"
+    log:
+        "logs/qsfilter/{sampleid}/{basecaller}_{model}_{cmp}_{qscore}.log"
+    benchmark:
+        "logs/qsfilter/{sampleid}/{basecaller}_{model}_{cmp}_{qscore}.bmk"
     params:
         cmp=getcmp,
         qscore=lambda wc: wc.qscore.lstrip("0")
@@ -64,5 +72,5 @@ rule qsfilter:
         slurm_partition=get_resource("qsfilter","partition")
     conda: "envs/pycoqc.yaml"
     shell:"""
-        samtools view -e '[qs]{params.cmp}{params.qscore}' {input} > {output}
+        samtools view -e '[qs]{params.cmp}{params.qscore}' {input} > {output} 2> {log}
     """
