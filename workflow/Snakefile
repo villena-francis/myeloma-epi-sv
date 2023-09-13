@@ -8,7 +8,7 @@ except KeyError:
     pass
 
 def input_main(wc):
-    for sid in ['mysample']:
+    for sid in config["samples"]:
         for bc in config["basecallers"]:
             for mod in config["basecallers"][bc]["models"]:
                 yield f"results/qsfilter/{sid}/dorado_{mod}_gt_08.bam" 
@@ -17,7 +17,7 @@ rule main:
     input: input_main
 
 rule basecall_dorado:
-    input: config["paths"]["pod5"]
+    input: lambda wc: config["samples"][wc.sampleid]["pod5"]
     output: "results/basecall/{sampleid}/dorado_{model}.bam"
     params:
         bin=config["basecallers"]["dorado"]["bin"],
