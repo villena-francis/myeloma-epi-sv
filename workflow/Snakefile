@@ -23,7 +23,10 @@ def input_main(wc):
         for bc in config["basecallers"]:
             for mod in config["basecallers"][bc]["models"]:
                 for filt in config["filters"]:
-                    o += [f"results/qsfilter/{sid}/dorado-{mod}-{filt}.bam", f"results/pycoqc/{sid}/{bc}-{mod}.html"]
+                    o += [
+                        f"results/qsfilter/{sid}/dorado-{mod}-{filt}.bam",
+                        f"results/pycoqc/{sid}/{bc}-{mod}.html",
+                    ]
     return o
 
 
@@ -55,11 +58,14 @@ rule basecall_dorado:
         {params.bin} basecaller {params.modelspath}/{wildcards.model} {input} > {output} 2> {log}
     """
 
+
 rule summary_dorado:
-    input: "results/basecall/{sampleid}/dorado-{model}.bam"
-    output: temp("results/summary_dorado/{sampleid}/dorado-{model}.txt")
+    input:
+        "results/basecall/{sampleid}/dorado-{model}.bam",
+    output:
+        temp("results/summary_dorado/{sampleid}/dorado-{model}.txt"),
     log:
-        "logs/summary_dorado/{sampleid}/dorado-{model}.log"
+        "logs/summary_dorado/{sampleid}/dorado-{model}.log",
     benchmark:
         "logs/summary_dorado/{sampleid}/dorado-{model}.bmk"
     params:
@@ -75,13 +81,19 @@ rule summary_dorado:
         {params.bin} summary {input} >> {output} 2> {log}
     """
 
+
 rule pycoqc:
-    input: "results/summary_dorado/{sampleid}/dorado-{model}.txt"
-    output: "results/pycoqc/{sampleid}/{basecaller}-{model}.html"
-    log: "logs/pycoqc/{sampleid}/{basecaller}-{model}.log"
-    benchmark: "logs/pycoqc/{sampleid}/{basecaller}-{model}.bmk"
+    input:
+        "results/summary_dorado/{sampleid}/dorado-{model}.txt",
+    output:
+        "results/pycoqc/{sampleid}/{basecaller}-{model}.html",
+    log:
+        "logs/pycoqc/{sampleid}/{basecaller}-{model}.log",
+    benchmark:
+        "logs/pycoqc/{sampleid}/{basecaller}-{model}.bmk"
     threads: get_resource("pycoqc", "threads")
-    conda: "envs/pycoqc.yaml"
+    conda:
+        "envs/pycoqc.yaml"
     resources:
         mem_mb=get_resource("pycoqc", "mem_mb"),
         runtime=get_resource("pycoqc", "runtime"),
