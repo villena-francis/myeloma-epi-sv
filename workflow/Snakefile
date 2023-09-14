@@ -24,7 +24,7 @@ def input_main(wc):
             for mod in config["basecallers"][bc]["models"]:
                 for filt in config["filters"]:
                     o += [
-                        f"results/qsfilter/{sid}/dorado-{mod}-{filt}.bam",
+                        f"results/minimap2/{sid}/dorado-{mod}-{filt}.bam",
                         f"results/pycoqc/{sid}/{bc}-{mod}.html",
                     ]
     return o
@@ -117,7 +117,6 @@ def getcmp(wc):
     else:
         raise ValueError(f"Operator {wc.cmp} not recognised")
 
-
 rule qsfilter:
     input:
         "results/basecall/{sampleid}/{basecaller}-{model}.bam",
@@ -140,4 +139,27 @@ rule qsfilter:
     shell:
         """
         samtools view -e '[qs]{params.cmp}{params.qscore}' {input} > {output} 2> {log}
+    """
+
+
+rule minimap2:
+    input:
+        reads="results/qsfilter/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.bam",
+        ref=config["paths"]["reference"],
+    output:
+        "results/minimap2/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.bam",
+    log:
+        "logs/minimap2/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.log",
+    benchmark:
+        "logs/minimap2/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.bmk"
+    threads: get_resource("minimap2", "threads")
+    resources:
+        mem_mb=get_resource("minimap2", "mem_mb"),
+        runtime=get_resource("minimap2", "runtime"),
+        slurm_partition=get_resource("minimap2", "partition"),
+    conda:
+        "envs/minimap2.yaml"
+    shell:
+        """
+        samtools fastq -T "*" {input.reads} | minimap2 -ax map-ont -t {threads} {input.ref} - | samtools sort - -o {output} 2> {log}
     """

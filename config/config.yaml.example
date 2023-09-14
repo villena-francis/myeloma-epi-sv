@@ -1,5 +1,6 @@
 paths:
   models: "/path/to/models"
+  reference: "/path/to/ref"
 
 filters:
     - ge_08
