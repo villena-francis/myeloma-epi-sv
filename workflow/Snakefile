@@ -18,11 +18,13 @@ except KeyError:
 
 
 def input_main(wc):
+    o = []
     for sid in config["samples"]:
         for bc in config["basecallers"]:
             for mod in config["basecallers"][bc]["models"]:
                 for filt in config["filters"]:
-                    yield f"results/qsfilter/{sid}/dorado_{mod}_{filt}.bam"
+                    o += [f"results/qsfilter/{sid}/dorado-{mod}-{filt}.bam", f"results/pycoqc/{sid}/{bc}-{mod}.html"]
+    return o
 
 
 rule main:
@@ -34,11 +36,11 @@ rule basecall_dorado:
     input:
         lambda wc: config["samples"][wc.sampleid]["pod5"],
     output:
-        "results/basecall/{sampleid}/dorado_{model}.bam",
+        "results/basecall/{sampleid}/dorado-{model}.bam",
     log:
-        "logs/basecall_dorado/{sampleid}/dorado_{model}.log",
+        "logs/basecall_dorado/{sampleid}/dorado-{model}.log",
     benchmark:
-        "logs/basecall_dorado/{sampleid}/dorado_{model}.bmk"
+        "logs/basecall_dorado/{sampleid}/dorado-{model}.bmk"
     params:
         bin=config["basecallers"]["dorado"]["bin"],
         modelspath=config["paths"]["models"],
@@ -51,6 +53,43 @@ rule basecall_dorado:
     shell:
         """
         {params.bin} basecaller {params.modelspath}/{wildcards.model} {input} > {output} 2> {log}
+    """
+
+rule summary_dorado:
+    input: "results/basecall/{sampleid}/dorado-{model}.bam"
+    output: temp("results/summary_dorado/{sampleid}/dorado-{model}.txt")
+    log:
+        "logs/summary_dorado/{sampleid}/dorado-{model}.log"
+    benchmark:
+        "logs/summary_dorado/{sampleid}/dorado-{model}.bmk"
+    params:
+        bin=config["basecallers"]["dorado"]["bin"],
+    threads: get_resource("summary_dorado", "threads")
+    resources:
+        mem_mb=get_resource("summary_dorado", "mem_mb"),
+        runtime=get_resource("summary_dorado", "runtime"),
+        slurm_partition=get_resource("summary_dorado", "partition"),
+        slurm_extra=get_resource("summary_dorado", "slurm_extra"),
+    shell:
+        """
+        {params.bin} summary {input} >> {output} 2> {log}
+    """
+
+rule pycoqc:
+    input: "results/summary_dorado/{sampleid}/dorado-{model}.txt"
+    output: "results/pycoqc/{sampleid}/{basecaller}-{model}.html"
+    log: "logs/pycoqc/{sampleid}/{basecaller}-{model}.log"
+    benchmark: "logs/pycoqc/{sampleid}/{basecaller}-{model}.bmk"
+    threads: get_resource("pycoqc", "threads")
+    conda: "envs/pycoqc.yaml"
+    resources:
+        mem_mb=get_resource("pycoqc", "mem_mb"),
+        runtime=get_resource("pycoqc", "runtime"),
+        slurm_partition=get_resource("pycoqc", "partition"),
+        slurm_extra=get_resource("pycoqc", "slurm_extra"),
+    shell:
+        """
+       pycoQC -f {input} -o {output} 2>&1 > {log}
     """
 
 
@@ -69,13 +108,13 @@ def getcmp(wc):
 
 rule qsfilter:
     input:
-        "results/basecall/{sampleid}/{basecaller}_{model}.bam",
+        "results/basecall/{sampleid}/{basecaller}-{model}.bam",
     output:
-        "results/qsfilter/{sampleid}/{basecaller}_{model}_{cmp}_{qscore}.bam",
+        "results/qsfilter/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.bam",
     log:
-        "logs/qsfilter/{sampleid}/{basecaller}_{model}_{cmp}_{qscore}.log",
+        "logs/qsfilter/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.log",
     benchmark:
-        "logs/qsfilter/{sampleid}/{basecaller}_{model}_{cmp}_{qscore}.bmk"
+        "logs/qsfilter/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.bmk"
     params:
         cmp=getcmp,
         qscore=lambda wc: wc.qscore.lstrip("0"),

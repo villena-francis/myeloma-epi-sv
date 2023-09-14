@@ -5,7 +5,6 @@ config/config.*.yaml
 config/config.yaml
 tmp/
 _old/
-results/
 logs/
 resources/**
 !resources/*
@@ -13,3 +12,4 @@ resources/**
 .snakemake*
 .*.swp
 *.fai
+results
