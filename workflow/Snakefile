@@ -23,10 +23,9 @@ def input_main(wc):
         for bc in config["basecallers"]:
             for mod in config["basecallers"][bc]["models"]:
                 for filt in config["filters"]:
-                    o += [
-                        f"results/minimap2/{sid}/dorado-{mod}-{filt}.bam",
-                        f"results/pycoqc/{sid}/{bc}-{mod}.html",
-                    ]
+                    o.append(f"results/pycoqc/{sid}/{bc}-{mod}.html")
+                    for ref in config["paths"]["references"]:
+                        o.append(f"results/minimap2/{sid}/{ref}/dorado-{mod}-{filt}.bam")
     return o
 
 
@@ -145,13 +144,13 @@ rule qsfilter:
 rule minimap2:
     input:
         reads="results/qsfilter/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.bam",
-        ref=config["paths"]["reference"],
+        ref=lambda wc: config["paths"]["references"][wc.ref],
     output:
-        "results/minimap2/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.bam",
+        "results/minimap2/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bam",
     log:
-        "logs/minimap2/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.log",
+        "logs/minimap2/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.log",
     benchmark:
-        "logs/minimap2/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.bmk"
+        "logs/minimap2/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bmk"
     threads: get_resource("minimap2", "threads")
     resources:
         mem_mb=get_resource("minimap2", "mem_mb"),
