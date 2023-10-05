@@ -25,7 +25,7 @@ def input_main(wc):
                 for filt in config["filters"]:
                     o.append(f"results/pycoqc/{sid}/{bc}-{mod}.html")
                     for ref in config["paths"]["references"]:
-                        o.append(f"results/primary/{sid}/{ref}/dorado-{mod}-{filt}.bam")
+                        o.append(f"results/primary/{sid}/{ref}/dorado-{mod}-{filt}.cov")
     return o
 
 
@@ -186,4 +186,24 @@ rule primary:
         """
         samtools view -@ {threads} -F 2308 -b {input} | samtools sort -@ {threads} -o {output} 2> {log}
         samtools index {output}
+    """
+
+rule coverage:
+    input:
+        "results/primary/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bam",
+    output:
+        "results/primary/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.cov",
+    log:
+        "logs/coverage/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.log",
+    benchmark:
+        "logs/coverage/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bmk"
+    resources:
+        mem_mb=get_resource("coverage", "mem_mb"),
+        runtime=get_resource("coverage", "runtime"),
+        slurm_partition=get_resource("coverage", "partition"),
+    conda:
+        "envs/samtools.yaml"
+    shell:
+        """
+        samtools coverage -A -o {output} {input} &> {log}
     """
