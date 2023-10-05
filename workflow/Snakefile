@@ -25,7 +25,7 @@ def input_main(wc):
                 for filt in config["filters"]:
                     o.append(f"results/pycoqc/{sid}/{bc}-{mod}.html")
                     for ref in config["paths"]["references"]:
-                        o.append(f"results/minimap2/{sid}/{ref}/dorado-{mod}-{filt}.bam")
+                        o.append(f"results/primary/{sid}/{ref}/dorado-{mod}-{filt}.bam")
     return o
 
 
@@ -157,8 +157,33 @@ rule minimap2:
         runtime=get_resource("minimap2", "runtime"),
         slurm_partition=get_resource("minimap2", "partition"),
     conda:
-        "envs/minimap2.yaml"
+        "envs/samtools.yaml"
+    params:
+        bin=config["basecallers"]["dorado"]["bin"]
     shell:
         """
-        samtools fastq -T "*" {input.reads} | minimap2 -ax map-ont -t {threads} {input.ref} - | samtools sort - -o {output} 2> {log}
+        {params.bin} aligner -t {threads} {input.ref} {input.reads} | samtools sort -@ {threads} -o {output} 2> {log}
+        samtools index {output}
+    """
+
+rule primary:
+    input:
+        "results/minimap2/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bam",
+    output:
+        "results/primary/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bam",
+    log:
+        "logs/primary/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.log",
+    benchmark:
+        "logs/primary/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bmk"
+    threads: lambda wc: get_resource("primary", "threads")/2
+    resources:
+        mem_mb=get_resource("primary", "mem_mb"),
+        runtime=get_resource("primary", "runtime"),
+        slurm_partition=get_resource("primary", "partition"),
+    conda:
+        "envs/samtools.yaml"
+    shell:
+        """
+        samtools view -@ {threads} -F 2308 -b {input} | samtools sort -@ {threads} -o {output} 2> {log}
+        samtools index {output}
     """
