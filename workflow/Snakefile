@@ -157,12 +157,10 @@ rule minimap2:
         runtime=get_resource("minimap2", "runtime"),
         slurm_partition=get_resource("minimap2", "partition"),
     conda:
-        "envs/samtools.yaml"
-    params:
-        bin=config["basecallers"]["dorado"]["bin"]
+        "envs/minimap2.yaml"
     shell:
         """
-        {params.bin} aligner -t {threads} {input.ref} {input.reads} | samtools sort -@ {threads} -o {output} 2> {log}
+        samtools fastq -T "*" {input.reads} | minimap2 -a -x map-ont -y -t {threads} {input.ref} - | samtools sort - -o {output} 2> {log}
         samtools index {output}
     """
 
