@@ -18,6 +18,7 @@ def input_main(wc):
                 o.append(f"results/pycoqc/{sid}/{bc}.html")
                 for ref in config["paths"]["references"]:
                     o.append(f"results/primary/{sid}/{ref}/dorado-{filt}.cov")
+                    o.append(f"results/mosdepth/{sid}/{ref}/dorado-{filt}.mosdepth.global.dist.txt")
     return o
 
 
@@ -161,8 +162,8 @@ rule primary:
     input:
         "results/minimap2/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
     output:
-        "results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
-        "results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam.bai",
+        bam="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
+        bai="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam.bai",
     log:
         "logs/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
     benchmark:
@@ -176,8 +177,8 @@ rule primary:
         "envs/samtools.yaml"
     shell:
         """
-        samtools view -@ {threads} -F 2308 -b {input} | samtools sort -@ {threads} -o {output} 2> {log}
-        samtools index {output}
+        samtools view -@ {threads} -F 2308 -b {input} | samtools sort -@ {threads} -o {output.bam} 2> {log}
+        samtools index {output.bam}
     """
 
 rule coverage:
@@ -199,3 +200,23 @@ rule coverage:
         """
         samtools coverage -A -o {output} {input} &> {log}
     """
+
+rule mosdepth:
+    input:
+        bam="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
+        bai="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam.bai",
+    output:
+        "results/mosdepth/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.mosdepth.global.dist.txt",
+        "results/mosdepth/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.per-base.bed.gz",
+        summary="results/mosdepth/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.mosdepth.summary.txt",
+    log:
+        "logs/mosdepth/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
+    benchmark:
+        "logs/mosdepth/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bmk"
+    threads: get_resource("mosdepth", "threads"),
+    resources:
+        mem_mb=get_resource("mosdepth", "mem_mb"),
+        runtime=get_resource("mosdepth", "runtime"),
+        slurm_partition=get_resource("mosdepth", "partition"),
+    wrapper:
+        "v3.1.0/bio/mosdepth"
