@@ -10,22 +10,14 @@ def get_resource(rule, resource):
     except KeyError:
         return config["resources"]["default"][resource]
 
-
-try:
-    config["paths"]["models"] = os.environ["ONT_BC_MODELS"]
-except KeyError:
-    pass
-
-
 def input_main(wc):
     o = []
     for sid in config["samples"]:
         for bc in config["basecallers"]:
-            for mod in config["basecallers"][bc]["models"]:
-                for filt in config["filters"]:
-                    o.append(f"results/pycoqc/{sid}/{bc}-{mod}.html")
-                    for ref in config["paths"]["references"]:
-                        o.append(f"results/primary/{sid}/{ref}/dorado-{mod}-{filt}.cov")
+            for filt in config["filters"]:
+                o.append(f"results/pycoqc/{sid}/{bc}.html")
+                for ref in config["paths"]["references"]:
+                    o.append(f"results/primary/{sid}/{ref}/dorado-{filt}.cov")
     return o
 
 
@@ -38,14 +30,15 @@ rule basecall_dorado:
     input:
         lambda wc: config["samples"][wc.sampleid]["pod5"],
     output:
-        "results/basecall/{sampleid}/dorado-{model}.bam",
+        "results/basecall/{sampleid}/dorado.bam",
     log:
-        "logs/basecall_dorado/{sampleid}/dorado-{model}.log",
+        "logs/basecall_dorado/{sampleid}/dorado.log",
     benchmark:
-        "logs/basecall_dorado/{sampleid}/dorado-{model}.bmk"
+        "logs/basecall_dorado/{sampleid}/dorado.bmk"
     params:
         bin=config["basecallers"]["dorado"]["bin"],
-        modelspath=config["paths"]["models"],
+        model=get_resource("basecall_dorado", "params_model"),
+        extra=get_resource("basecall_dorado", "params_extra"),
     threads: get_resource("basecall_dorado", "threads")
     resources:
         mem_mb=get_resource("basecall_dorado", "mem_mb"),
@@ -54,19 +47,19 @@ rule basecall_dorado:
         slurm_extra=get_resource("basecall_dorado", "slurm_extra"),
     shell:
         """
-        {params.bin} basecaller {params.modelspath}/{wildcards.model} {input} > {output} 2> {log}
+        {params.bin} basecaller {params.model} {input} {params.extra} > {output} 2> {log}
     """
 
 
 rule summary_dorado:
     input:
-        "results/basecall/{sampleid}/dorado-{model}.bam",
+        "results/basecall/{sampleid}/dorado.bam",
     output:
-        temp("results/summary_dorado/{sampleid}/dorado-{model}.txt"),
+        "results/summary_dorado/{sampleid}/dorado.txt",
     log:
-        "logs/summary_dorado/{sampleid}/dorado-{model}.log",
+        "logs/summary_dorado/{sampleid}/dorado.log",
     benchmark:
-        "logs/summary_dorado/{sampleid}/dorado-{model}.bmk"
+        "logs/summary_dorado/{sampleid}/dorado.bmk"
     params:
         bin=config["basecallers"]["dorado"]["bin"],
     threads: get_resource("summary_dorado", "threads")
@@ -83,13 +76,13 @@ rule summary_dorado:
 
 rule pycoqc:
     input:
-        "results/summary_dorado/{sampleid}/dorado-{model}.txt",
+        "results/summary_dorado/{sampleid}/dorado.txt",
     output:
-        "results/pycoqc/{sampleid}/{basecaller}-{model}.html",
+        "results/pycoqc/{sampleid}/{basecaller}.html",
     log:
-        "logs/pycoqc/{sampleid}/{basecaller}-{model}.log",
+        "logs/pycoqc/{sampleid}/{basecaller}.log",
     benchmark:
-        "logs/pycoqc/{sampleid}/{basecaller}-{model}.bmk"
+        "logs/pycoqc/{sampleid}/{basecaller}.bmk"
     threads: get_resource("pycoqc", "threads")
     conda:
         "envs/pycoqc.yaml"
@@ -118,13 +111,13 @@ def getcmp(wc):
 
 rule qsfilter:
     input:
-        "results/basecall/{sampleid}/{basecaller}-{model}.bam",
+        "results/basecall/{sampleid}/{basecaller}.bam",
     output:
-        "results/qsfilter/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.bam",
+        "results/qsfilter/{sampleid}/{basecaller}-{cmp}-{qscore}.bam",
     log:
-        "logs/qsfilter/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.log",
+        "logs/qsfilter/{sampleid}/{basecaller}-{cmp}-{qscore}.log",
     benchmark:
-        "logs/qsfilter/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.bmk"
+        "logs/qsfilter/{sampleid}/{basecaller}-{cmp}-{qscore}.bmk"
     params:
         cmp=getcmp,
         qscore=lambda wc: wc.qscore.lstrip("0"),
@@ -143,14 +136,14 @@ rule qsfilter:
 
 rule minimap2:
     input:
-        reads="results/qsfilter/{sampleid}/{basecaller}-{model}-{cmp}-{qscore}.bam",
+        reads="results/qsfilter/{sampleid}/{basecaller}-{cmp}-{qscore}.bam",
         ref=lambda wc: config["paths"]["references"][wc.ref],
     output:
-        "results/minimap2/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bam",
+        "results/minimap2/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
     log:
-        "logs/minimap2/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.log",
+        "logs/minimap2/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
     benchmark:
-        "logs/minimap2/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bmk"
+        "logs/minimap2/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bmk"
     threads: get_resource("minimap2", "threads")
     resources:
         mem_mb=get_resource("minimap2", "mem_mb"),
@@ -166,13 +159,14 @@ rule minimap2:
 
 rule primary:
     input:
-        "results/minimap2/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bam",
+        "results/minimap2/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
     output:
-        "results/primary/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bam",
+        "results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
+        "results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam.bai",
     log:
-        "logs/primary/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.log",
+        "logs/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
     benchmark:
-        "logs/primary/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bmk"
+        "logs/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bmk"
     threads: lambda wc: get_resource("primary", "threads")/2
     resources:
         mem_mb=get_resource("primary", "mem_mb"),
@@ -188,13 +182,13 @@ rule primary:
 
 rule coverage:
     input:
-        "results/primary/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bam",
+        "results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
     output:
-        "results/primary/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.cov",
+        "results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.cov",
     log:
-        "logs/coverage/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.log",
+        "logs/coverage/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
     benchmark:
-        "logs/coverage/{sampleid}/{ref}/{basecaller}-{model}-{cmp}-{qscore}.bmk"
+        "logs/coverage/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bmk"
     resources:
         mem_mb=get_resource("coverage", "mem_mb"),
         runtime=get_resource("coverage", "runtime"),
