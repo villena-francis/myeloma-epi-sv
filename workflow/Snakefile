@@ -19,6 +19,8 @@ def input_main(wc):
                 for ref in config["paths"]["references"]:
                     o.append(f"results/primary/{sid}/{ref}/dorado-{filt}.cov")
                     o.append(f"results/mosdepth/{sid}/{ref}/dorado-{filt}.mosdepth.global.dist.txt")
+                    o.append(f"results/modkit/pileup/{sid}/{ref}/dorado-{filt}.bed.gz.tbi")
+                    o.append(f"results/modkit/pileup_bg/{sid}/{ref}/dorado-{filt}")
     return o
 
 
@@ -220,3 +222,72 @@ rule mosdepth:
         slurm_partition=get_resource("mosdepth", "partition"),
     wrapper:
         "v3.1.0/bio/mosdepth"
+
+rule modkit_pileup:
+    input:
+        bam="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
+        bai="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam.bai",
+    output:
+        bed="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bed",
+        #bgzip="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bed.gz",
+        #tabix="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bed.gz.tbi",
+    log:
+        "logs/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
+    benchmark:
+        "logs/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bmk"
+    threads: get_resource("modkit_pileup", "threads"),
+    resources:
+        mem_mb=get_resource("modkit_pileup", "mem_mb"),
+        runtime=get_resource("modkit_pileup", "runtime"),
+        slurm_partition=get_resource("modkit_pileup", "partition"),
+    params:
+        bin=config["modkit"]["bin"],
+    shell:"""
+        {params.bin} pileup {input.bam} {output.bed} \
+          --threads {threads} \
+          --log-filepath {log}
+    """
+
+rule modkit_pileup_bg:
+    input:
+        bam="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
+        bai="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam.bai",
+    output:
+        bg=directory("results/modkit/pileup_bg/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}"),
+    threads: get_resource("modkit_pileup", "threads"),
+    resources:
+        mem_mb=get_resource("modkit_pileup", "mem_mb"),
+        runtime=get_resource("modkit_pileup", "runtime"),
+        slurm_partition=get_resource("modkit_pileup", "partition"),
+    params:
+        bin=config["modkit"]["bin"],
+    log:
+        "logs/modkit/pileup_bg/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
+    shell:"""
+        {params.bin} pileup {input.bam} {output.bg} \
+          --bedgraph \
+          --threads {threads} \
+          --log-filepath {log}
+    """
+
+rule modkit_tabix:
+    input:
+        bed="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bed",
+    output:
+        bgzip="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bed.gz",
+        tabix="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bed.gz.tbi",
+    log:
+        "logs/modkit/tabix/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
+    benchmark:
+        "logs/modkit/tabix/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bmk"
+    threads: get_resource("modkit_tabix", "threads"),
+    resources:
+        mem_mb=get_resource("modkit_tabix", "mem_mb"),
+        runtime=get_resource("modkit_tabix", "runtime"),
+        slurm_partition=get_resource("modkit_tabix", "partition"),
+    conda:
+        "envs/samtools.yaml"
+    shell:"""
+        bgzip {input.bed} &> {log}
+        tabix {output.bgzip} &> {log}
+    """
