@@ -1,1 +1,1 @@
-# Basecalling pipeline for Oxford Nanopore Technologies data
+# Myeloma epigenetics and SV analysis
