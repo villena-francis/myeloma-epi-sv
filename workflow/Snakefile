@@ -10,6 +10,13 @@ def get_resource(rule, resource):
     except KeyError:
         return config["resources"]["default"][resource]
 
+regions = {}
+with open(config["regions"]) as ifh:
+    fields = ["chrom","start","end","label","score","strand"]
+    for l in ifh:
+        data = l.rstrip("\n").split()
+        regions[data[3]] = dict(zip(fields,data))
+
 def input_main(wc):
     o = []
     for patient in config["samples"]:
@@ -21,6 +28,9 @@ def input_main(wc):
             for mod in ["m","h"]:
                 for strand in ["fw","rv"]:
                     o.append(f"results/modkit/pileup/{patient}/{sid}.{mod}.{strand}.bw")
+    for patient in config["samples"]:
+        for label in regions:
+            o.append(f"results/methylartist/{patient}/{label}.png")
     return o
 
 
@@ -288,3 +298,70 @@ rule bedgraphtobigwig:
         slurm_partition=get_resource("bedgraphtobigwig", "partition"),
     wrapper:
         "v3.7.0/bio/ucsc/bedGraphToBigWig"
+
+rule decompress_ref:
+    input:
+        ref=config["ref"],
+    output:
+        "results/decompress_ref/ref.fa"
+    log:
+        "logs/decompress_ref/ref.out",
+    shell:"""
+        gunzip -c {input.ref} > {output} 2> {log}
+    """
+
+def get_region(wc):
+    region = regions[wc.label]
+    chrom = region['chrom']
+    start = int(region['start']) - 5000
+    end = int(region['end']) + 5000
+    return f"{chrom}:{start}-{end}"
+
+def get_colored_bams(wc, input):
+    bamc = []
+    for bam in input.bams:
+        sid = os.path.splitext(os.path.basename(bam))[0]
+        try:
+            colour = config["samples"][wc.patient][sid]["colour"]
+            bamc.append(f"{bam}:{colour}")
+        except KeyError:
+            bamc.append(bam)
+    return ",".join(bamc)
+
+rule methylartist:
+    input:
+        bams=lambda wc: [f"results/primary/{{patient}}/{sampleid}.bam" for sampleid in config["samples"][wc.patient]],
+        ann=config["ann"],
+        ref="results/decompress_ref/ref.fa",
+        hl=config["highlights"],
+    output:
+        png="results/methylartist/{patient}/{label}.png"
+    log:
+        o="logs/methylartist/{patient}/{label}.out",
+        e="logs/methylartist/{patient}/{label}.err",
+    benchmark:
+        "logs/methylartist/{patient}/{label}.bmk"
+    params:
+        reg=get_region,
+        bams=get_colored_bams,
+    conda: "envs/methylartist.yaml"
+    threads: get_resource("methylartist", "threads"),
+    resources:
+        mem_mb=get_resource("methylartist", "mem_mb"),
+        runtime=get_resource("methylartist", "runtime"),
+        slurm_partition=get_resource("methylartists", "partition"),
+    shell:"""
+        methylartist locus \
+                -b {params.bams} \
+                -g {input.ann} \
+                -p {threads} \
+                -n CG \
+                --mods m \
+                --labelgenes \
+                -r {input.ref} \
+                -o {output.png} \
+                --highlight_bed {input.hl} \
+                -i "{params.reg}" \
+                --panelratios 1,5,1,3,3 \
+                > {log.o} 2> {log.e}
+    """
