@@ -12,17 +12,15 @@ def get_resource(rule, resource):
 
 def input_main(wc):
     o = []
-    for sid in config["samples"]:
-        for bc in config["basecallers"]:
-            for filt in config["filters"]:
-                o.append(f"results/pycoqc/{sid}/{bc}.html")
-                for ref in config["paths"]["references"]:
-                    o.append(f"results/primary/{sid}/{ref}/dorado-{filt}.cov")
-                    o.append(f"results/mosdepth/{sid}/{ref}/dorado-{filt}.mosdepth.global.dist.txt")
-                    o.append(f"results/modkit/pileup/{sid}/{ref}/dorado-{filt}.bed.gz.tbi")
-	            for mod in ["m","h"]:
-                        for strand in ["fw","rv"]:
-                            o.append(f"results/modkit/pileup/{sid}/{ref}/dorado-{filt}.{mod}.{strand}.bw")
+    for patient in config["samples"]:
+        for sid in config["samples"][patient]:
+            o.append(f"results/pycoqc/{patient}/{sid}.html")
+            o.append(f"results/primary/{patient}/{sid}.cov")
+            o.append(f"results/mosdepth/{patient}/{sid}.mosdepth.global.dist.txt")
+            o.append(f"results/modkit/pileup/{patient}/{sid}.bed.gz.tbi")
+            for mod in ["m","h"]:
+                for strand in ["fw","rv"]:
+                    o.append(f"results/modkit/pileup/{patient}/{sid}.{mod}.{strand}.bw")
     return o
 
 
@@ -33,13 +31,13 @@ rule main:
 
 rule basecall_dorado:
     input:
-        lambda wc: config["samples"][wc.sampleid]["pod5"],
+        lambda wc: config["samples"][wc.patient][wc.sampleid]["pod5"],
     output:
-        "results/basecall/{sampleid}/dorado.bam",
+        "results/basecall_dorado/{patient}/{sampleid}.bam",
     log:
-        "logs/basecall_dorado/{sampleid}/dorado.log",
+        "logs/basecall_dorado/{patient}/{sampleid}.log",
     benchmark:
-        "logs/basecall_dorado/{sampleid}/dorado.bmk"
+        "logs/basecall_dorado/{patient}/{sampleid}.bmk"
     params:
         bin=config["basecallers"]["dorado"]["bin"],
         model=get_resource("basecall_dorado", "params_model"),
@@ -58,13 +56,13 @@ rule basecall_dorado:
 
 rule summary_dorado:
     input:
-        "results/basecall/{sampleid}/dorado.bam",
+        "results/basecall_dorado/{sampleid}.bam",
     output:
-        "results/summary_dorado/{sampleid}/dorado.txt",
+        "results/summary_dorado/{sampleid}.txt",
     log:
-        "logs/summary_dorado/{sampleid}/dorado.log",
+        "logs/summary_dorado/{sampleid}.log",
     benchmark:
-        "logs/summary_dorado/{sampleid}/dorado.bmk"
+        "logs/summary_dorado/{sampleid}.bmk"
     params:
         bin=config["basecallers"]["dorado"]["bin"],
     threads: get_resource("summary_dorado", "threads")
@@ -81,13 +79,13 @@ rule summary_dorado:
 
 rule pycoqc:
     input:
-        "results/summary_dorado/{sampleid}/dorado.txt",
+        "results/summary_dorado/{sampleid}.txt",
     output:
-        "results/pycoqc/{sampleid}/{basecaller}.html",
+        "results/pycoqc/{sampleid}.html",
     log:
-        "logs/pycoqc/{sampleid}/{basecaller}.log",
+        "logs/pycoqc/{sampleid}.log",
     benchmark:
-        "logs/pycoqc/{sampleid}/{basecaller}.bmk"
+        "logs/pycoqc/{sampleid}.bmk"
     threads: get_resource("pycoqc", "threads")
     conda:
         "envs/pycoqc.yaml"
@@ -101,31 +99,17 @@ rule pycoqc:
        pycoQC -f {input} -o {output} 2>&1 > {log}
     """
 
-
-def getcmp(wc):
-    if wc.cmp == "ge":
-        return ">="
-    elif wc.cmp == "gt":
-        return ">"
-    elif wc.cmp == "le":
-        return "<="
-    elif wc.cmp == "lt":
-        return "<"
-    else:
-        raise ValueError(f"Operator {wc.cmp} not recognised")
-
 rule qsfilter:
     input:
-        "results/basecall/{sampleid}/{basecaller}.bam",
+        "results/basecall/{sampleid}.bam",
     output:
-        "results/qsfilter/{sampleid}/{basecaller}-{cmp}-{qscore}.bam",
+        "results/qsfilter/{sampleid}.bam",
     log:
-        "logs/qsfilter/{sampleid}/{basecaller}-{cmp}-{qscore}.log",
+        "logs/qsfilter/{sampleid}.log",
     benchmark:
-        "logs/qsfilter/{sampleid}/{basecaller}-{cmp}-{qscore}.bmk"
+        "logs/qsfilter/{sampleid}.bmk"
     params:
-        cmp=getcmp,
-        qscore=lambda wc: wc.qscore.lstrip("0"),
+        minq=config["minq"]
     threads: get_resource("qsfilter", "threads")
     resources:
         mem_mb=get_resource("qsfilter", "mem_mb"),
@@ -135,20 +119,20 @@ rule qsfilter:
         "envs/samtools.yaml"
     shell:
         """
-        samtools view -e '[qs]{params.cmp}{params.qscore}' {input} > {output} 2> {log}
+        samtools view -e '[qs]>={params.minq}' {input} > {output} 2> {log}
     """
 
 
 rule minimap2:
     input:
-        reads="results/qsfilter/{sampleid}/{basecaller}-{cmp}-{qscore}.bam",
-        ref=lambda wc: config["paths"]["references"][wc.ref],
+        reads="results/qsfilter/{patient}/{sampleid}.bam",
+        ref=lambda wc: config["ref"],
     output:
-        "results/minimap2/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
+        "results/minimap2/{patient}/{sampleid}.bam",
     log:
-        "logs/minimap2/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
+        "logs/minimap2/{patient}/{sampleid}.log",
     benchmark:
-        "logs/minimap2/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bmk"
+        "logs/minimap2/{patient}/{sampleid}.bmk"
     threads: get_resource("minimap2", "threads")
     resources:
         mem_mb=get_resource("minimap2", "mem_mb"),
@@ -164,14 +148,14 @@ rule minimap2:
 
 rule primary:
     input:
-        "results/minimap2/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
+        "results/minimap2/{patient}/{sampleid}.bam",
     output:
-        bam="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
-        bai="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam.bai",
+        bam="results/primary/{patient}/{sampleid}.bam",
+        bai="results/primary/{patient}/{sampleid}.bam.bai",
     log:
-        "logs/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
+        "logs/primary/{patient}/{sampleid}.log",
     benchmark:
-        "logs/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bmk"
+        "logs/primary/{patient}/{sampleid}.bmk"
     threads: lambda wc: get_resource("primary", "threads")/2
     resources:
         mem_mb=get_resource("primary", "mem_mb"),
@@ -187,13 +171,13 @@ rule primary:
 
 rule coverage:
     input:
-        "results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
+        "results/primary/{patient}/{sampleid}.bam",
     output:
-        "results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.cov",
+        "results/primary/{patient}/{sampleid}.cov",
     log:
-        "logs/coverage/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
+        "logs/coverage/{patient}/{sampleid}.log",
     benchmark:
-        "logs/coverage/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bmk"
+        "logs/coverage/{patient}/{sampleid}.bmk"
     resources:
         mem_mb=get_resource("coverage", "mem_mb"),
         runtime=get_resource("coverage", "runtime"),
@@ -207,16 +191,16 @@ rule coverage:
 
 rule mosdepth:
     input:
-        bam="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
-        bai="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam.bai",
+        bam="results/primary/{patient}/{sampleid}.bam",
+        bai="results/primary/{patient}/{sampleid}.bam.bai",
     output:
-        "results/mosdepth/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.mosdepth.global.dist.txt",
-        "results/mosdepth/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.per-base.bed.gz",
-        summary="results/mosdepth/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.mosdepth.summary.txt",
+        "results/mosdepth/{patient}/{sampleid}.mosdepth.global.dist.txt",
+        "results/mosdepth/{patient}/{sampleid}.per-base.bed.gz",
+        summary="results/mosdepth/{patient}/{sampleid}.mosdepth.summary.txt",
     log:
-        "logs/mosdepth/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
+        "logs/mosdepth/{patient}/{sampleid}.log",
     benchmark:
-        "logs/mosdepth/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bmk"
+        "logs/mosdepth/{patient}/{sampleid}.bmk"
     threads: get_resource("mosdepth", "threads"),
     resources:
         mem_mb=get_resource("mosdepth", "mem_mb"),
@@ -227,16 +211,14 @@ rule mosdepth:
 
 rule modkit_pileup:
     input:
-        bam="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam",
-        bai="results/primary/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bam.bai",
+        bam="results/primary/{patient}/{sampleid}.bam",
+        bai="results/primary/{patient}/{sampleid}.bam.bai",
     output:
-        bed="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bed",
-        #bgzip="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bed.gz",
-        #tabix="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bed.gz.tbi",
+        bed="results/modkit/pileup/{patient}/{sampleid}.bed",
     log:
-        "logs/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
+        "logs/modkit/pileup/{patient}/{sampleid}.log",
     benchmark:
-        "logs/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bmk"
+        "logs/modkit/pileup/{patient}/{sampleid}.bmk"
     threads: get_resource("modkit_pileup", "threads"),
     resources:
         mem_mb=get_resource("modkit_pileup", "mem_mb"),
@@ -252,14 +234,14 @@ rule modkit_pileup:
 
 rule modkit_tabix:
     input:
-        bed="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bed",
+        bed="results/modkit/pileup/{patient}/{sampleid}.bed",
     output:
-        bgzip="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bed.gz",
-        tabix="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bed.gz.tbi",
+        bgzip="results/modkit/pileup/{patient}/{sampleid}.bed.gz",
+        tabix="results/modkit/pileup/{patient}/{sampleid}.bed.gz.tbi",
     log:
-        "logs/modkit/tabix/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.log",
+        "logs/modkit/tabix/{patient}/{sampleid}.log",
     benchmark:
-        "logs/modkit/tabix/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bmk"
+        "logs/modkit/tabix/{patient}/{sampleid}.bmk"
     threads: get_resource("modkit_tabix", "threads"),
     resources:
         mem_mb=get_resource("modkit_tabix", "mem_mb"),
@@ -274,30 +256,30 @@ rule modkit_tabix:
 
 rule bedmethyl_to_bg:
     input:
-        bedmethyl="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.bed.gz",
+        bedmethyl="results/modkit/pileup/{patient}/{sampleid}.bed.gz",
     output:
-        mfw=temp("results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.m.fw.bedgraph"),
-        hfw=temp("results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.h.fw.bedgraph"),
-        mrv=temp("results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.m.rv.bedgraph"),
-        hrv=temp("results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.h.rv.bedgraph"),
+        mfw=temp("results/modkit/pileup/{patient}/{sampleid}.m.fw.bedgraph"),
+        hfw=temp("results/modkit/pileup/{patient}/{sampleid}.h.fw.bedgraph"),
+        mrv=temp("results/modkit/pileup/{patient}/{sampleid}.m.rv.bedgraph"),
+        hrv=temp("results/modkit/pileup/{patient}/{sampleid}.h.rv.bedgraph"),
     threads: get_resource("bedmethyl_to_bg", "threads"),
     resources:
         mem_mb=get_resource("bedmethyl_to_bg", "mem_mb"),
         runtime=get_resource("bedmethyl_to_bg", "runtime"),
         slurm_partition=get_resource("bedmethyl_to_bg", "partition"),
     log:
-        o="logs/modkit/bedmethyl_to_bg/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.out",
-        e="logs/modkit/bedmethyl_to_bg/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.err",
+        o="logs/modkit/bedmethyl_to_bg/{patient}/{sampleid}.out",
+        e="logs/modkit/bedmethyl_to_bg/{patient}/{sampleid}.err",
     script:"scripts/bmtobg.py"
 
 rule bedgraphtobigwig:
     input:
-        bedGraph="results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.{mod}.{strand}.bedgraph",
+        bedGraph="results/modkit/pileup/{patient}/{sampleid}.{mod}.{strand}.bedgraph",
         chromsizes="/storage/scratch01/users/tdidomenico/res/genomes/h_sapiens/gencode/v38/GRCh38.chronly.genome.chrsizes"
     output:
-        "results/modkit/pileup/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}.{mod}.{strand}.bw",
+        "results/modkit/pileup/{patient}/{sampleid}.{mod}.{strand}.bw",
     log:
-        "logs/modkit/bedgraphtobigwig/{sampleid}/{ref}/{basecaller}-{cmp}-{qscore}-{mod}.{strand}.log",
+        "logs/modkit/bedgraphtobigwig/{patient}/{sampleid}.{mod}.{strand}.log",
     params:
         "" # optional params string
     resources:
