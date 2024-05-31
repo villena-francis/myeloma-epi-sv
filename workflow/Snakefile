@@ -25,6 +25,8 @@ def input_main(wc):
             o.append(f"results/primary/{patient}/{sid}.cov")
             o.append(f"results/mosdepth/{patient}/{sid}.mosdepth.global.dist.txt")
             o.append(f"results/modkit/pileup/{patient}/{sid}.bed.gz.tbi")
+            o.append(f"results/sniffles/{patient}/{sid}.vcf.gz")
+            o.append(f"results/nanovar/{patient}/{sid}.nanovar.pass.vcf")
             for mod in ["m","h"]:
                 for strand in ["fw","rv"]:
                     o.append(f"results/modkit/pileup/{patient}/{sid}.{mod}.{strand}.bw")
@@ -364,4 +366,48 @@ rule methylartist:
                 -i "{params.reg}" \
                 --panelratios 1,5,1,3,3 \
                 > {log.o} 2> {log.e}
+    """
+
+rule sniffles:
+    input:
+        bam="results/primary/{patient}/{sampleid}.bam",
+        ref="results/decompress_ref/ref.fa",
+    output:
+        vcf="results/sniffles/{patient}/{sampleid}.vcf.gz",
+    log:
+        "logs/sniffles/{patient}/{sampleid}.log",
+    benchmark:
+        "logs/sniffles/{patient}/{sampleid}.bmk"
+    threads: get_resource("sniffles", "threads"),
+    resources:
+        mem_mb=get_resource("sniffles", "mem_mb"),
+        runtime=get_resource("sniffles", "runtime"),
+        slurm_partition=get_resource("sniffles", "partition"),
+    conda: "envs/sniffles.yaml"
+    shell:"""
+        sniffles --input {input.bam} --vcf {output.vcf} -t {threads} --reference {input.ref} --mosaic --mosaic-include-germline &> {log}
+    """
+
+rule nanovar:
+    input:
+        bam="results/primary/{patient}/{sampleid}.bam",
+        ref="results/decompress_ref/ref.fa",
+    output:
+        vcf="results/nanovar/{patient}/{sampleid}.nanovar.pass.vcf",
+        html="results/nanovar/{patient}/{sampleid}.nanovar.report.html",
+        wrkdir=directory("results/nanovar_workdirs/{patient}/{sampleid}"),
+    log:
+        "logs/nanovar/{patient}/{sampleid}.log",
+    benchmark:
+        "logs/nanovar/{patient}/{sampleid}.bmk"
+    threads: get_resource("nanovar", "threads"),
+    resources:
+        mem_mb=get_resource("nanovar", "mem_mb"),
+        runtime=get_resource("nanovar", "runtime"),
+        slurm_partition=get_resource("nanovar", "partition"),
+    params:
+        workdir="results/nanovar_workdirs/{patient}/{sampleid}"
+    conda: "envs/nanovar.yaml"
+    shell:"""
+        nanovar --annotate_ins human -t {threads} -f hg38 {input.bam} {input.ref} {output.wrkdir} &> {log}
     """
