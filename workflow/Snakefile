@@ -330,6 +330,9 @@ def get_colored_bams(wc, input):
             bamc.append(bam)
     return ",".join(bamc)
 
+def get_time_retry(wc, attempt):
+    return attempt * get_resource("methylartist", "runtime")
+
 rule methylartist:
     input:
         bams=lambda wc: [f"results/primary/{{patient}}/{sampleid}.bam" for sampleid in config["samples"][wc.patient]],
@@ -350,8 +353,9 @@ rule methylartist:
     threads: get_resource("methylartist", "threads"),
     resources:
         mem_mb=get_resource("methylartist", "mem_mb"),
-        runtime=get_resource("methylartist", "runtime"),
+        runtime=get_time_retry,
         slurm_partition=get_resource("methylartists", "partition"),
+    retries: 4
     shell:"""
         methylartist locus \
                 -b {params.bams} \
