@@ -28,6 +28,7 @@ def input_main(wc):
             o.append(f"results/sniffles/{patient}/{sampleid}.vcf.gz")
             #o.append(f"results/nanovar/{patient}/{sampleid}.nanovar.pass.vcf")
             o.append(f"results/deepvariant/{patient}/{sampleid}.vcf")
+            o.append(f"results/clair3/{patient}/{sampleid}/phased_merge_output.vcf.gz")
             for mod in ["m","h"]:
                 for strand in ["fw","rv"]:
                     o.append(f"results/modkit/pileup/{patient}/{sampleid}.{mod}.{strand}.bw")
@@ -441,4 +442,37 @@ rule deepvariant:
             --reads /mnt/{input.bam} \
             --output_vcf /mnt/{output.vcf} \
             --num_shards {threads} &> {log}
+    """
+
+rule clair3:
+    input:
+        bam="results/primary/{patient}/{sampleid}.bam",
+        ref="results/decompress_ref/ref.fa",
+    output:
+        full="results/clair3/{patient}/{sampleid}/full_alignment.vcf.gz",
+        merge="results/clair3/{patient}/{sampleid}/merge_output.vcf.gz",
+        pileup="results/clair3/{patient}/{sampleid}/pileup.vcf.gz",
+        phased="results/clair3/{patient}/{sampleid}/phased_merge_output.vcf.gz",
+    log:
+        "logs/clair3/{patient}/{sampleid}.log",
+    benchmark:
+        "logs/clair3/{patient}/{sampleid}.bmk"
+    threads: get_resource("clair3", "threads"),
+    resources:
+        mem_mb=get_resource("clair3", "mem_mb"),
+        runtime=get_resource("clair3", "runtime"),
+        slurm_partition=get_resource("clair3", "partition"),
+    params:
+        model=config["clair3_model"]
+    conda: "envs/clair3.yaml"
+    shell: """
+      run_clair3.sh \
+          --bam_fn={input.bam} \
+          --ref_fn={input.ref} \
+          --threads={threads} \
+          --platform="ont" \
+          --model_path="{params.model}" \
+          --output=$(dirname {output.full}) \
+          --enable_phasing \
+          --longphase_for_phasing
     """
