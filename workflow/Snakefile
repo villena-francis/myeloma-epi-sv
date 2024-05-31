@@ -20,16 +20,17 @@ with open(config["regions"]) as ifh:
 def input_main(wc):
     o = []
     for patient in config["samples"]:
-        for sid in config["samples"][patient]:
-            o.append(f"results/pycoqc/{patient}/{sid}.html")
-            o.append(f"results/primary/{patient}/{sid}.cov")
-            o.append(f"results/mosdepth/{patient}/{sid}.mosdepth.global.dist.txt")
-            o.append(f"results/modkit/pileup/{patient}/{sid}.bed.gz.tbi")
-            o.append(f"results/sniffles/{patient}/{sid}.vcf.gz")
-            o.append(f"results/nanovar/{patient}/{sid}.nanovar.pass.vcf")
+        for sampleid in config["samples"][patient]:
+            o.append(f"results/pycoqc/{patient}/{sampleid}.html")
+            o.append(f"results/primary/{patient}/{sampleid}.cov")
+            o.append(f"results/mosdepth/{patient}/{sampleid}.mosdepth.global.dist.txt")
+            o.append(f"results/modkit/pileup/{patient}/{sampleid}.bed.gz.tbi")
+            o.append(f"results/sniffles/{patient}/{sampleid}.vcf.gz")
+            #o.append(f"results/nanovar/{patient}/{sampleid}.nanovar.pass.vcf")
+            o.append(f"results/deepvariant/{patient}/{sampleid}.vcf")
             for mod in ["m","h"]:
                 for strand in ["fw","rv"]:
-                    o.append(f"results/modkit/pileup/{patient}/{sid}.{mod}.{strand}.bw")
+                    o.append(f"results/modkit/pileup/{patient}/{sampleid}.{mod}.{strand}.bw")
     if config["run_methylartist"]:
         for patient in config["samples"]:
             for label in regions:
@@ -415,4 +416,29 @@ rule nanovar:
     conda: "envs/nanovar.yaml"
     shell:"""
         nanovar --annotate_ins human -t {threads} -f hg38 {input.bam} {input.ref} {output.wrkdir} &> {log}
+    """
+
+rule deepvariant:
+    input:
+        bam="results/primary/{patient}/{sampleid}.bam",
+        ref="results/decompress_ref/ref.fa",
+    output:
+        vcf="results/deepvariant/{patient}/{sampleid}.vcf",
+    log:
+        "logs/deepvariant/{patient}/{sampleid}.log",
+    benchmark:
+        "logs/deepvariant/{patient}/{sampleid}.bmk"
+    threads: get_resource("deepvariant", "threads"),
+    resources:
+        mem_mb=get_resource("deepvariant", "mem_mb"),
+        runtime=get_resource("deepvariant", "runtime"),
+        slurm_partition=get_resource("deepvariant", "partition"),
+    container: "docker://google/deepvariant:latest" 
+    shell: """
+        run_deepvariant \
+            --model_type ONT_R104 \
+            --ref /mnt/{input.ref} \
+            --reads /mnt/{input.bam} \
+            --output_vcf /mnt/{output.vcf} \
+            --num_shards {threads} &> {log}
     """
