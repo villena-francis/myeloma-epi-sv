@@ -30,9 +30,10 @@ def input_main(wc):
             for mod in ["m","h"]:
                 for strand in ["fw","rv"]:
                     o.append(f"results/modkit/pileup/{patient}/{sid}.{mod}.{strand}.bw")
-    for patient in config["samples"]:
-        for label in regions:
-            o.append(f"results/methylartist/{patient}/{label}.png")
+    if config["run_methylartist"]:
+        for patient in config["samples"]:
+            for label in regions:
+                o.append(f"results/methylartist/{patient}/{label}.png")
     return o
 
 
