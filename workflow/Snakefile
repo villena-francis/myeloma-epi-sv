@@ -24,11 +24,10 @@ def input_main(wc):
             o.append(f"results/pycoqc/{patient}/{sampleid}.html")
             o.append(f"results/primary/{patient}/{sampleid}.cov")
             o.append(f"results/mosdepth/{patient}/{sampleid}.mosdepth.global.dist.txt")
-            o.append(f"results/modkit/pileup/{patient}/{sampleid}.bed.gz.tbi")
             o.append(f"results/sniffles/{patient}/{sampleid}.vcf.gz")
             #o.append(f"results/nanovar/{patient}/{sampleid}.nanovar.pass.vcf")
-            o.append(f"results/deepvariant/{patient}/{sampleid}.vcf")
-            o.append(f"results/clair3/{patient}/{sampleid}/phased_merge_output.vcf.gz")
+            #o.append(f"results/deepvariant/{patient}/{sampleid}.vcf")
+            o.append(f"results/severus/{patient}/{sampleid}")
             for mod in ["m","h"]:
                 for strand in ["fw","rv"]:
                     o.append(f"results/modkit/pileup/{patient}/{sampleid}.{mod}.{strand}.bw")
@@ -452,7 +451,8 @@ rule clair3:
         full="results/clair3/{patient}/{sampleid}/full_alignment.vcf.gz",
         merge="results/clair3/{patient}/{sampleid}/merge_output.vcf.gz",
         pileup="results/clair3/{patient}/{sampleid}/pileup.vcf.gz",
-        phased="results/clair3/{patient}/{sampleid}/phased_merge_output.vcf.gz",
+        phased_vcf="results/clair3/{patient}/{sampleid}/phased_merge_output.vcf.gz",
+        phased_bam="results/clair3/{patient}/{sampleid}/phased_output.bam",
     log:
         "logs/clair3/{patient}/{sampleid}.log",
     benchmark:
@@ -474,5 +474,48 @@ rule clair3:
           --model_path="{params.model}" \
           --output=$(dirname {output.full}) \
           --enable_phasing \
-          --longphase_for_phasing
+          --use_whatshap_for_intermediate_phasing \
+          --use_whatshap_for_final_output_phasing \
+          --use_whatshap_for_final_output_haplotagging &> {log}
+    """
+
+def get_normal(wc):
+    """use 'normal' sample as control if available"""
+
+    for sample in config["samples"][wc.patient]:
+        s = config["samples"][wc.patient][sample]
+        # check that there's a control sample for the patient, and that it's not
+        # the same sample as the target
+        if sample != wc.sampleid and "normal" in s and s["normal"]:
+            return f" --control-bam results/clair3/{wc.patient}/{sample}/phased_output.bam"
+    return ""
+
+rule severus:
+    input:
+        vcf="results/clair3/{patient}/{sampleid}/phased_merge_output.vcf.gz",
+        bam_tumour="results/clair3/{patient}/{sampleid}/phased_output.bam",
+    output:
+        directory("results/severus/{patient}/{sampleid}")
+    log:
+        "logs/severus/{patient}/{sampleid}.log",
+    benchmark:
+        "logs/severus/{patient}/{sampleid}.bmk"
+    threads: get_resource("severus", "threads"),
+    resources:
+        mem_mb=get_resource("severus", "mem_mb"),
+        runtime=get_resource("severus", "runtime"),
+        slurm_partition=get_resource("severus", "partition"),
+    params:
+        vntrs=config["severus_vntrs"],
+        bam_normal=get_normal,
+    conda: "envs/severus.yaml"
+    shell: """
+        ln -s $(basename {input.bam_tumour}) $(dirname {input.bam_tumour})/tumour.bam
+        ln -s $(basename {input.bam_tumour}).bai $(dirname {input.bam_tumour})/tumour.bam.bai
+        severus \
+            --target-bam $(dirname {input.bam_tumour})/tumour.bam {params.bam_normal} \
+            --out-dir {output}  \
+            -t {threads} \
+            --phasing-vcf {input.vcf} \
+            --vntr-bed {params.vntrs} &> {log}
     """
