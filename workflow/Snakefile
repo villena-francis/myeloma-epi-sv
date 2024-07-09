@@ -3,7 +3,6 @@ import os
 
 configfile: "config/config.yaml"
 
-
 def get_resource(rule, resource):
     try:
         return config["resources"][rule][resource]
@@ -20,6 +19,11 @@ with open(config["regions"]) as ifh:
 def input_main(wc):
     o = []
     for patient in config["samples"]:
+        normal=False
+        for sampleid in config["samples"][patient]:
+            s = config["samples"][patient][sampleid]
+            if "normal" in s and s["normal"]:
+                normal = sampleid
         for sampleid in config["samples"][patient]:
             o.append(f"results/pycoqc/{patient}/{sampleid}.html")
             o.append(f"results/primary/{patient}/{sampleid}.cov")
@@ -29,6 +33,9 @@ def input_main(wc):
             #o.append(f"results/nanovar/{patient}/{sampleid}.nanovar.pass.vcf")
             #o.append(f"results/deepvariant/{patient}/{sampleid}.vcf")
             o.append(f"results/severus/{patient}/{sampleid}")
+            o.append(f"results/svision/{patient}/{sampleid}/germline")
+            if normal and normal != sampleid:
+                o.append(f"results/svision/{patient}/{sampleid}/somatic")
             for mod in ["m","h"]:
                 for strand in ["fw","rv"]:
                     o.append(f"results/modkit/pileup/{patient}/{sampleid}.{mod}.{strand}.bw")
@@ -291,7 +298,7 @@ rule modkit_dmr:
         slurm_partition=get_resource("modkit_dmr", "partition"),
     params:
         bin=config["modkit"]["bin"],
-        inargs=lambda wc: " ".join([f"-s {f} " + f.split("/")[-1].rstrip(".bed.gz") for f in get_modkit_dmr_input(wc)])
+        inargs=lambda wc: " ".join([f"-s {f} " + f.split("/")[-1].split(os.extsep,1)[0] for f in get_modkit_dmr_input(wc)])
     shell:"""
     {params.bin} dmr multi \
         {params.inargs} \
@@ -514,7 +521,7 @@ rule clair3:
           --use_whatshap_for_final_output_haplotagging &> {log}
     """
 
-def get_normal(wc):
+def get_normal_severus(wc):
     """use 'normal' sample as control if available"""
 
     for sample in config["samples"][wc.patient]:
@@ -542,7 +549,7 @@ rule severus:
         slurm_partition=get_resource("severus", "partition"),
     params:
         vntrs=config["severus_vntrs"],
-        bam_normal=get_normal,
+        bam_normal=get_normal_severus,
     conda: "envs/severus.yaml"
     shell: """
         ln -s $(basename {input.bam_tumour}) $(dirname {input.bam_tumour})/tumour.bam
@@ -553,4 +560,48 @@ rule severus:
             -t {threads} \
             --phasing-vcf {input.vcf} \
             --vntr-bed {params.vntrs} &> {log}
+    """
+
+def get_normal_svision(wc):
+    """use 'normal' sample as control if available"""
+
+    for sample in config["samples"][wc.patient]:
+        s = config["samples"][wc.patient][sample]
+        # check that there's a control sample for the patient, and that it's not
+        # the same sample as the target
+        if sample != wc.sampleid and "normal" in s and s["normal"]:
+            return f" --base_path results/primary/{wc.patient}/{sample}.bam"
+    return ""
+
+rule svision:
+    input:
+        bam_tumour="results/primary/{patient}/{sampleid}.bam",
+        ref="results/decompress_ref/ref.fa",
+    output:
+        directory("results/svision/{patient}/{sampleid}/{germline}")
+    log:
+        "logs/svision/{patient}/{sampleid}/{germline}.log",
+    benchmark:
+        "logs/svision/{patient}/{sampleid}/{germline}.bmk"
+    threads: get_resource("svision", "threads"),
+    resources:
+        mem_mb=get_resource("svision", "mem_mb"),
+        runtime=get_resource("svision", "runtime"),
+        slurm_partition=get_resource("svision", "partition"),
+        slurm_extra=get_resource("svision", "slurm_extra"),
+    params:
+        germline=lambda wc: "--detect_mode germline" if wc.germline == "germline" else f"{get_normal_svision(wc)} --detect_mode somatic",
+        model=config["svision"]["model"],
+        access=config["svision"]["access"],
+    conda: "svision"
+    shell: """
+        SVision-pro \
+            --target_path {input.bam_tumour} \
+            {params.germline} \
+            --genome_path {input.ref} \
+            --model_path {params.model} \
+            --access_path {params.access} \
+            --out_path {output} \
+            --sample_name {wildcards.sampleid}_{wildcards.germline} \
+            --device gpu &> {log}
     """
