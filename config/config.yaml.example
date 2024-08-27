@@ -1,17 +1,22 @@
-paths:
-  references:
-    ref1: "/path/to/ref1"
-    ref2: "/path/to/ref2"
+ref: "/path/to/ref.fa.gz"
 
-filters:
-    - ge_08
-    - lt_08
+clair3_model: "/path/to/r1041_e82_400bps_sup_v420"
 
 samples:
     sample1:
         pod5: "/path/to/pod5s"
     sample2:
         pod5: "/path/to/pod5s2"
+
+samples:
+    subject01:
+        timepoint01:
+            pod5: "/path/to/pod5s"
+        timepoint02:
+            pod5: "/path/to/pod5s"
+    subject02:
+        sample01:
+            pod5: "/path/to/pod5s"
 
 basecallers:
   dorado:
@@ -32,3 +37,8 @@ resources:
         runtime: 1440
         slurm_extra: "--gres=gpu:1"
         params_model: "hac,5mCG_5hmCG"
+    clair3:
+        runtime: 420
+        mem_mb: 64000
+        threads: 24
+        params_extra: "/path/to/clair3"

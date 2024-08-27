@@ -338,41 +338,6 @@ rule modkit_dmr:
         --log-filepath {log}
     """
 
-rule bedmethyl_to_bg:
-    input:
-        bedmethyl="results/modkit/pileup/{patient}/{sampleid}.bed.gz",
-    output:
-        mfw=temp("results/modkit/pileup/{patient}/{sampleid}.m.fw.bedgraph"),
-        hfw=temp("results/modkit/pileup/{patient}/{sampleid}.h.fw.bedgraph"),
-        mrv=temp("results/modkit/pileup/{patient}/{sampleid}.m.rv.bedgraph"),
-        hrv=temp("results/modkit/pileup/{patient}/{sampleid}.h.rv.bedgraph"),
-    threads: get_resource("bedmethyl_to_bg", "threads"),
-    resources:
-        mem_mb=get_resource("bedmethyl_to_bg", "mem_mb"),
-        runtime=get_resource("bedmethyl_to_bg", "runtime"),
-        slurm_partition=get_resource("bedmethyl_to_bg", "partition"),
-    log:
-        o="logs/modkit/bedmethyl_to_bg/{patient}/{sampleid}.out",
-        e="logs/modkit/bedmethyl_to_bg/{patient}/{sampleid}.err",
-    script:"scripts/bmtobg.py"
-
-rule bedgraphtobigwig:
-    input:
-        bedGraph="results/modkit/pileup/{patient}/{sampleid}.{mod}.{strand}.bedgraph",
-        chromsizes="/storage/scratch01/users/tdidomenico/res/genomes/h_sapiens/gencode/v38/GRCh38.chronly.genome.chrsizes"
-    output:
-        "results/modkit/pileup/{patient}/{sampleid}.{mod}.{strand}.bw",
-    log:
-        "logs/modkit/bedgraphtobigwig/{patient}/{sampleid}.{mod}.{strand}.log",
-    params:
-        "" # optional params string
-    resources:
-        mem_mb=get_resource("bedgraphtobigwig", "mem_mb"),
-        runtime=get_resource("bedgraphtobigwig", "runtime"),
-        slurm_partition=get_resource("bedgraphtobigwig", "partition"),
-    wrapper:
-        "v3.7.0/bio/ucsc/bedGraphToBigWig"
-
 rule decompress_ref:
     input:
         ref=config["ref"],
