@@ -37,6 +37,7 @@ def input_main(wc):
             o.append(f"results/svision/{patient}/{sampleid}/germline")
             if normal and normal != sampleid:
                 o.append(f"results/svision/{patient}/{sampleid}/somatic")
+                o.append(f"results/savana/{patient}/{sampleid}/phased_output.classified.vcf")
             for mod in ["m","h"]:
                 for strand in ["fw","rv"]:
                     o.append(f"results/modkit/pileup/{patient}/{sampleid}.{mod}.{strand}.bw")
@@ -597,4 +598,48 @@ rule svision:
             --out_path {output} \
             --sample_name {wildcards.sampleid}_{wildcards.germline} \
             --device gpu &> {log}
+    """
+
+def get_normal_bam(wc):
+    """use 'normal' sample as control if available"""
+
+    for sample in config["samples"][wc.patient]:
+        s = config["samples"][wc.patient][sample]
+        # check that there's a control sample for the patient, and that it's not
+        # the same sample as the target
+        if sample != wc.sampleid and "normal" in s and s["normal"]:
+            return f"results/primary/{wc.patient}/{sample}.bam"
+
+    raise ValueError("Couldn't locate normal sample")
+
+
+rule savana:
+    input:
+        bam_tumour="results/clair3/{patient}/{sampleid}/phased_output.bam",
+        bam_normal = lambda wc : get_normal_bam,
+        ref="results/decompress_ref/ref.fa",
+        phased_vcf="results/clair3/{patient}/{sampleid}/phased_merge_output.vcf.gz",
+    output:
+        "results/savana/{patient}/{sampleid}/phased_output.classified.vcf"
+    log:
+        "logs/savana/{patient}/{sampleid}.log",
+    benchmark:
+        "logs/savana/{patient}/{sampleid}.bmk",
+    threads: get_resource("savana", "threads")
+    resources:
+        mem_mb=get_resource("savana", "mem_mb"),
+        runtime=get_resource("savana", "runtime"),
+        slurm_partition=get_resource("savana", "partition")
+    conda:
+        "envs/savana.yaml"
+    params:
+        blacklist=config["encode_blacklist"]
+    shell:"""
+        savana \
+            --tumour {input.bam_tumour} \
+            --normal {input.bam_normal} \
+            --outdir {output} \
+            --ref {input.ref} \
+            --phased_vcf {input.phased_vcf} \
+            --blacklist {params.blacklist} &> {log}
     """
