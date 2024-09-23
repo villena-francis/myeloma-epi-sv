@@ -38,6 +38,7 @@ def input_main(wc):
             if normal and normal != sampleid:
                 o.append(f"results/svision/{patient}/{sampleid}/somatic")
                 o.append(f"results/savana/{patient}/{sampleid}/phased_output.classified.vcf")
+                o.append(f"results/clairs/{patient}/{sampleid}/output.vcf.gz")
             for mod in ["m","h"]:
                 for strand in ["fw","rv"]:
                     o.append(f"results/modkit/pileup/{patient}/{sampleid}.{mod}.{strand}.bw")
@@ -473,10 +474,10 @@ rule deepvariant:
     shell: """
         run_deepvariant \
             --model_type ONT_R104 \
-            --ref /mnt/{input.ref} \
-            --reads /mnt/{input.bam} \
-            --output_vcf /mnt/{output.vcf} \
-            --num_shards {threads} &> {log}
+            --ref /{input.ref} \
+            --reads /{input.bam} \
+            --output_vcf /{output.vcf} \
+            --num_shards {threads} &> /{log}
     """
 
 rule clair3:
@@ -642,4 +643,37 @@ rule savana:
             --ref {input.ref} \
             --phased_vcf {input.phased_vcf} \
             --blacklist {params.blacklist} &> {log}
+    """
+
+rule clairs:
+    input:
+        bam_tumour="results/primary/{patient}/{sampleid}.bam",
+        bam_normal = lambda wc : get_normal_bam,
+        ref="results/decompress_ref/ref.fa",
+    output:
+        "results/clairs/{patient}/{sampleid}/output.vcf.gz"
+    log:
+        "logs/clairs/{patient}/{sampleid}.log",
+    benchmark:
+        "logs/clairs/{patient}/{sampleid}.bmk",
+    threads: get_resource("clairs", "threads")
+    resources:
+        mem_mb=get_resource("clairs", "mem_mb"),
+        runtime=get_resource("clairs", "runtime"),
+        slurm_partition=get_resource("clairs", "partition")
+    container: "docker://hkubal/clairs:latest" 
+    conda:
+        "envs/clairs.yaml"
+    shell:"""
+        run_clairs \
+            --tumor_bam_fn /{input.bam_tumour} \
+            --normal_bam_fn /{input.bam_normal} \
+            --ref_fn /{input.ref} \
+            --threads {threads} \
+            -p ont_r10_dorado_sup_5khz \
+            -P /models/r1041_e82_400bps_sup_v420/pileup.pkl \
+            -F /models/r1041_e82_400bps_sup_v420/full_alignment.pkl \
+            --clair3_model_path /models/clair3_models/r1041_e82_400bps_sup_v420 \
+            --include_all_ctgs \
+            --output_dir $(dirname /{output})
     """
