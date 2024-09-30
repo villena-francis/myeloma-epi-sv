@@ -547,8 +547,8 @@ rule severus:
         bam_normal=get_normal_severus,
     conda: "envs/severus.yaml"
     shell: """
-        ln -s $(basename {input.bam_tumour}) $(dirname {input.bam_tumour})/tumour.bam
-        ln -s $(basename {input.bam_tumour}).bai $(dirname {input.bam_tumour})/tumour.bam.bai
+        ln -sf $(basename {input.bam_tumour}) $(dirname {input.bam_tumour})/tumour.bam
+        ln -sf $(basename {input.bam_tumour}).bai $(dirname {input.bam_tumour})/tumour.bam.bai
         severus \
             --target-bam $(dirname {input.bam_tumour})/tumour.bam {params.bam_normal} \
             --out-dir {output}  \
