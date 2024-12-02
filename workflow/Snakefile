@@ -247,7 +247,9 @@ rule mosdepth:
         bai="results/primary/{patient}/{sampleid}.bam.bai",
     output:
         "results/mosdepth/{patient}/{sampleid}.mosdepth.global.dist.txt",
+        "results/mosdepth/{patient}/{sampleid}.mosdepth.region.dist.txt",
         "results/mosdepth/{patient}/{sampleid}.per-base.bed.gz",
+        "results/mosdepth/{patient}/{sampleid}.regions.bed.gz",
         summary="results/mosdepth/{patient}/{sampleid}.mosdepth.summary.txt",
     log:
         "logs/mosdepth/{patient}/{sampleid}.log",
@@ -258,8 +260,11 @@ rule mosdepth:
         mem_mb=get_resource("mosdepth", "mem_mb"),
         runtime=get_resource("mosdepth", "runtime"),
         slurm_partition=get_resource("mosdepth", "partition"),
+    params:
+        extra="--fast-mode",
+        by="1000",
     wrapper:
-        "v3.1.0/bio/mosdepth"
+        "v5.2.1/bio/mosdepth"
 
 rule modkit_pileup:
     input:
