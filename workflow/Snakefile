@@ -29,7 +29,8 @@ def input_main(wc):
             o.append(f"results/pycoqc/{patient}/{sampleid}.html")
             o.append(f"results/primary/{patient}/{sampleid}.cov")
             o.append(f"results/mosdepth/{patient}/{sampleid}.mosdepth.global.dist.txt")
-            o.append(f"results/modkit/dmr/{patient}")
+            o.append(f"results/modkit/pileup/{patient}/{sampleid}.bed")
+            o.append(f"results/modkit/pileup_bg/{patient}/{sampleid}")
             o.append(f"results/sniffles/{patient}/{sampleid}.vcf.gz")
             o.append(f"results/severus/{patient}/{sampleid}")
             o.append(f"results/svision/{patient}/{sampleid}/germline")
@@ -37,9 +38,6 @@ def input_main(wc):
                 o.append(f"results/svision/{patient}/{sampleid}/somatic")
                 o.append(f"results/savana/{patient}/{sampleid}/phased_output.classified.vcf")
                 o.append(f"results/clairs/{patient}/{sampleid}/output.vcf.gz")
-            for mod in ["m","h"]:
-                for strand in ["fw","rv"]:
-                    o.append(f"results/modkit/pileup/{patient}/{sampleid}.{mod}.{strand}.bw")
     if config["run_methylartist"]:
         for patient in config["samples"]:
             for label in regions:
@@ -283,6 +281,28 @@ rule modkit_pileup:
         bin=config["modkit"]["bin"],
     shell:"""
         {params.bin} pileup {input.bam} {output.bed} \
+          --threads {threads} \
+          --log-filepath {log}
+    """
+
+rule modkit_pileup_bg:
+    input:
+        bam="results/primary/{patient}/{sampleid}.bam",
+        bai="results/primary/{patient}/{sampleid}.bam.bai",
+    output:
+        bg=directory("results/modkit/pileup_bg/{patient}/{sampleid}"),
+    threads: get_resource("modkit_pileup", "threads"),
+    resources:
+        mem_mb=get_resource("modkit_pileup", "mem_mb"),
+        runtime=get_resource("modkit_pileup", "runtime"),
+        slurm_partition=get_resource("modkit_pileup", "partition"),
+    params:
+        bin=config["modkit"]["bin"],
+    log:
+        "logs/modkit/pileup_bg/{patient}/{sampleid}.log",
+    shell:"""
+        {params.bin} pileup {input.bam} {output.bg} \
+          --bedgraph \
           --threads {threads} \
           --log-filepath {log}
     """
