@@ -30,13 +30,9 @@ def input_main(wc):
             o.append(f"results/primary/{patient}/{sampleid}.cov")
             o.append(f"results/mosdepth/{patient}/{sampleid}.mosdepth.global.dist.txt")
             o.append(f"results/modkit/pileup/{patient}/{sampleid}.bed")
-            o.append(f"results/modkit/pileup_bg/{patient}/{sampleid}")
             o.append(f"results/sniffles/{patient}/{sampleid}.vcf.gz")
             o.append(f"results/severus/{patient}/{sampleid}")
-            o.append(f"results/svision/{patient}/{sampleid}/germline")
             if normal and normal != sampleid:
-                o.append(f"results/svision/{patient}/{sampleid}/somatic")
-                o.append(f"results/savana/{patient}/{sampleid}/phased_output.classified.vcf")
                 o.append(f"results/clairs/{patient}/{sampleid}/output.vcf.gz")
     if config["run_methylartist"]:
         for patient in config["samples"]:
@@ -285,28 +281,6 @@ rule modkit_pileup:
           --log-filepath {log}
     """
 
-rule modkit_pileup_bg:
-    input:
-        bam="results/primary/{patient}/{sampleid}.bam",
-        bai="results/primary/{patient}/{sampleid}.bam.bai",
-    output:
-        bg=directory("results/modkit/pileup_bg/{patient}/{sampleid}"),
-    threads: get_resource("modkit_pileup", "threads"),
-    resources:
-        mem_mb=get_resource("modkit_pileup", "mem_mb"),
-        runtime=get_resource("modkit_pileup", "runtime"),
-        slurm_partition=get_resource("modkit_pileup", "partition"),
-    params:
-        bin=config["modkit"]["bin"],
-    log:
-        "logs/modkit/pileup_bg/{patient}/{sampleid}.log",
-    shell:"""
-        {params.bin} pileup {input.bam} {output.bg} \
-          --bedgraph \
-          --threads {threads} \
-          --log-filepath {log}
-    """
-
 rule modkit_tabix:
     input:
         bed="results/modkit/pileup/{patient}/{sampleid}.bed",
@@ -531,50 +505,6 @@ rule severus:
             --vntr-bed {params.vntrs} &> {log}
     """
 
-def get_normal_svision(wc):
-    """use 'normal' sample as control if available"""
-
-    for sample in config["samples"][wc.patient]:
-        s = config["samples"][wc.patient][sample]
-        # check that there's a control sample for the patient, and that it's not
-        # the same sample as the target
-        if sample != wc.sampleid and "normal" in s and s["normal"]:
-            return f" --base_path results/primary/{wc.patient}/{sample}.bam"
-    return ""
-
-rule svision:
-    input:
-        bam_tumour="results/primary/{patient}/{sampleid}.bam",
-        ref="results/decompress_ref/ref.fa",
-    output:
-        directory("results/svision/{patient}/{sampleid}/{germline}")
-    log:
-        "logs/svision/{patient}/{sampleid}/{germline}.log",
-    benchmark:
-        "logs/svision/{patient}/{sampleid}/{germline}.bmk"
-    threads: get_resource("svision", "threads"),
-    resources:
-        mem_mb=get_resource("svision", "mem_mb"),
-        runtime=get_resource("svision", "runtime"),
-        slurm_partition=get_resource("svision", "partition"),
-        slurm_extra=get_resource("svision", "slurm_extra"),
-    params:
-        germline=lambda wc: "--detect_mode germline" if wc.germline == "germline" else f"{get_normal_svision(wc)} --detect_mode somatic",
-        model=config["svision"]["model"],
-        access=config["svision"]["access"],
-    conda: "svision"
-    shell: """
-        SVision-pro \
-            --target_path {input.bam_tumour} \
-            {params.germline} \
-            --genome_path {input.ref} \
-            --model_path {params.model} \
-            --access_path {params.access} \
-            --out_path {output} \
-            --sample_name {wildcards.sampleid}_{wildcards.germline} \
-            --device gpu &> {log}
-    """
-
 def get_normal_bam(wc):
     """use 'normal' sample as control if available"""
 
@@ -587,37 +517,6 @@ def get_normal_bam(wc):
 
     raise ValueError("Couldn't locate normal sample")
 
-
-rule savana:
-    input:
-        bam_tumour="results/clair3/{patient}/{sampleid}/phased_output.bam",
-        bam_normal = lambda wc : get_normal_bam,
-        ref="results/decompress_ref/ref.fa",
-        phased_vcf="results/clair3/{patient}/{sampleid}/phased_merge_output.vcf.gz",
-    output:
-        "results/savana/{patient}/{sampleid}/phased_output.classified.vcf"
-    log:
-        "logs/savana/{patient}/{sampleid}.log",
-    benchmark:
-        "logs/savana/{patient}/{sampleid}.bmk",
-    threads: get_resource("savana", "threads")
-    resources:
-        mem_mb=get_resource("savana", "mem_mb"),
-        runtime=get_resource("savana", "runtime"),
-        slurm_partition=get_resource("savana", "partition")
-    conda:
-        "envs/savana.yaml"
-    params:
-        blacklist=config["encode_blacklist"]
-    shell:"""
-        savana \
-            --tumour {input.bam_tumour} \
-            --normal {input.bam_normal} \
-            --outdir {output} \
-            --ref {input.ref} \
-            --phased_vcf {input.phased_vcf} \
-            --blacklist {params.blacklist} &> {log}
-    """
 
 rule clairs:
     input:
