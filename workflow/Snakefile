@@ -56,7 +56,7 @@ rule basecall_dorado:
     benchmark:
         "logs/basecall_dorado/{patient}/{sampleid}.bmk"
     params:
-        bin=config["basecallers"]["dorado"]["bin"],
+        bin=config["dorado_bin"],
         model=get_resource("basecall_dorado", "params_model"),
         extra=get_resource("basecall_dorado", "params_extra"),
     threads: get_resource("basecall_dorado", "threads")
@@ -81,7 +81,7 @@ rule summary_dorado:
     benchmark:
         "logs/summary_dorado/{sampleid}.bmk"
     params:
-        bin=config["basecallers"]["dorado"]["bin"],
+        bin=config["dorado_bin"],
     threads: get_resource("summary_dorado", "threads")
     resources:
         mem_mb=get_resource("summary_dorado", "mem_mb"),
@@ -274,7 +274,7 @@ rule modkit_pileup:
         runtime=get_resource("modkit_pileup", "runtime"),
         slurm_partition=get_resource("modkit_pileup", "partition"),
     params:
-        bin=config["modkit"]["bin"],
+        bin=config["modkit_bin"],
     shell:"""
         {params.bin} pileup {input.bam} {output.bed} \
           --threads {threads} \
@@ -324,7 +324,7 @@ rule modkit_dmr:
         runtime=get_resource("modkit_dmr", "runtime"),
         slurm_partition=get_resource("modkit_dmr", "partition"),
     params:
-        bin=config["modkit"]["bin"],
+        bin=config["modkit_bin"],
         inargs=lambda wc: " ".join([f"-s {f} " + f.split("/")[-1].split(os.extsep,1)[0] for f in get_modkit_dmr_input(wc)])
     shell:"""
     {params.bin} dmr multi \
