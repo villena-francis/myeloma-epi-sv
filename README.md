@@ -72,10 +72,10 @@ snakemake --use-conda --profile slurm
 2. **Quality Control**: Generate QC metrics and reports with PycoQC
 3. **Quality Filtering**: Filter reads based on quality score
 4. **Alignment**: Map reads to reference genome with Minimap2
-5. **Coverage Analysis**: Generate coverage statistics with Mosdepth
+5. **Coverage Analysis**: Generate coverage statistics with Mosdepth and samtools
 6. **Methylation Analysis**:
    - Extract methylation information with Modkit
-   - Visualize methylation patterns with MethylArtist
+   - Visualize methylation patterns with Methylartist
 7. **Variant Calling**:
    - SNV/indel detection with Clair3
    - Somatic variant detection with ClairS (for tumor-normal pairs)
