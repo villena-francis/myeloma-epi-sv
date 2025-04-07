@@ -8,7 +8,6 @@ severus_vntrs: "/path/to/vntrs/human_trf.bed"
 
 # Tool paths
 dorado_bin: "/path/to/dorado/bin/dorado"
-modkit_bin: "/path/to/modkit/modkit"
 clair3_model: "/path/to/clair3/r1041_e82_400bps_sup_v420"
 
 # Analysis parameters

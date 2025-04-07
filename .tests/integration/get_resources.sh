@@ -2,13 +2,10 @@ PATH_TESTS_ROOT=.tests/integration
 PATH_RESOURCES=$PATH_TESTS_ROOT/resources
 PATH_RESULTS=$PATH_TESTS_ROOT/results
 
-mkdir -p $PATH_RESOURCES/{clair3_model,modkit}
+mkdir -p $PATH_RESOURCES/clair3_model
 
 # Download the clair3 model
 curl -L https://cdn.oxfordnanoportal.com/software/analysis/models/clair3/r1041_e82_400bps_sup_v420.tar.gz | tar -xz -C $PATH_RESOURCES/clair3_model --strip-components=1
-
-# Download modkit
-curl -L https://github.com/nanoporetech/modkit/releases/download/v0.4.3/modkit_v0.4.3_u16_x86_64.tar.gz | tar -xz -C $PATH_RESOURCES/modkit --strip-components=1
 
 # Donwload resources from Zenodo
 wget -P $PATH_RESOURCES \

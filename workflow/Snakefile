@@ -268,15 +268,14 @@ rule modkit_pileup:
         "logs/modkit/pileup/{patient}/{sampleid}.log",
     benchmark:
         "logs/modkit/pileup/{patient}/{sampleid}.bmk"
+    conda: "envs/modkit.yaml"
     threads: get_resource("modkit_pileup", "threads"),
     resources:
         mem_mb=get_resource("modkit_pileup", "mem_mb"),
         runtime=get_resource("modkit_pileup", "runtime"),
         slurm_partition=get_resource("modkit_pileup", "partition"),
-    params:
-        bin=config["modkit_bin"],
     shell:"""
-        {params.bin} pileup {input.bam} {output.bed} \
+        modkit pileup {input.bam} {output.bed} \
           --threads {threads} \
           --log-filepath {log}
     """
