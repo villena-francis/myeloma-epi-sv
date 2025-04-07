@@ -285,7 +285,7 @@ rule decompress_ref:
     input:
         ref=config["ref"],
     output:
-        "results/decompress_ref/ref.fa"
+        temp("results/decompress_ref/ref.fa")
     log:
         "logs/decompress_ref/ref.out",
     shell:"""
