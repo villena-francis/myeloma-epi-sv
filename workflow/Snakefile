@@ -403,6 +403,7 @@ rule clair3:
           --model_path="{params.model}" \
           --output=$(dirname {output.full}) \
           --enable_phasing \
+          --include_all_ctgs \
           --use_whatshap_for_intermediate_phasing \
           --use_whatshap_for_final_output_phasing \
           --use_whatshap_for_final_output_haplotagging &> {log}
