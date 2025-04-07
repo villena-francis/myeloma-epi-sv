@@ -3,13 +3,8 @@ __pycache__/
 !config/config.*.yaml.example
 config/config.*.yaml
 config/config.yaml
-tmp/
-_old/
 logs/
-resources/**
-!resources/*
-!resources/*/.gitkeep
+resources/
 .snakemake*
 .*.swp
-*.fai
-results
+results/
