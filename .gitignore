@@ -7,4 +7,9 @@ logs/
 resources/
 .snakemake*
 .*.swp
-results/
+results
+
+/.tests/integration/*
+!/.tests/integration/config/
+!/.tests/integration/config/**
+!/.tests/integration/get_resources.sh
