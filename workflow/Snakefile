@@ -118,7 +118,7 @@ rule pycoqc:
 
 rule qsfilter:
     input:
-        "results/basecall/{sampleid}.bam",
+        "results/basecall_dorado/{sampleid}.bam",
     output:
         "results/qsfilter/{sampleid}.bam",
     log:
