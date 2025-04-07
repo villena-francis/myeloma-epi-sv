@@ -1,5 +1,6 @@
 # Oxford Nanopore Methylation and Structural Variant Analysis Pipeline
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15168660.svg)](https://doi.org/10.5281/zenodo.15168660)
 [![Integration test](https://github.com/cnio-bu/myeloma-epi-sv/actions/workflows/integration-test.yaml/badge.svg)](https://github.com/cnio-bu/myeloma-epi-sv/actions/workflows/integration-test.yaml)
 
 ## Overview
@@ -12,7 +13,7 @@ This is a Snakemake workflow for analyzing Oxford Nanopore Technologies (ONT) se
 - **Alignment**: High-quality read mapping with Minimap2
 - **Methylation Analysis**:
   - Methylation pileup with ONT Modkit
-  - Visualization with MethylArtist
+  - Visualization with methylartist
 - **Structural Variant Detection**: Multiple SV callers for comprehensive detection
   - Clair3 for SNV/indel calling
   - ClairS for somatic variant detection in tumor-normal pairs
@@ -43,7 +44,7 @@ cp config/config.yaml.example config/config.yaml
 The pipeline is configured through the `config/config.yaml` file, which includes:
 
 - **Reference files**: Paths to genome reference, annotations, and other required files
-- **Tool paths**: Locations of external tools like Dorado and CLAIR3 models
+- **Tool paths**: Locations of external tools like dorado and Clair3 models
 - **Analysis parameters**: Quality thresholds and analysis options
 - **Samples structure**: Hierarchical organization of samples with associated metadata
 - **Resource specifications**: Resource allocation for different workflow steps
@@ -75,7 +76,7 @@ snakemake --use-conda --profile slurm
 5. **Coverage Analysis**: Generate coverage statistics with Mosdepth and samtools
 6. **Methylation Analysis**:
    - Extract methylation information with Modkit
-   - Visualize methylation patterns with Methylartist
+   - Visualize methylation patterns with methylartist
 7. **Variant Calling**:
    - SNV/indel detection with Clair3
    - Somatic variant detection with ClairS (for tumor-normal pairs)
