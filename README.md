@@ -1,3 +1,5 @@
+[![Integration test](https://github.com/cnio-bu/myeloma-epi-sv/actions/workflows/integration-test.yaml/badge.svg)](https://github.com/cnio-bu/myeloma-epi-sv/actions/workflows/integration-test.yaml)
+
 # Myeloma epigenetics and SV analysis
 
 ## Running the pipeline
