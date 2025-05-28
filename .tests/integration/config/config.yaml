@@ -14,6 +14,11 @@ clair3_model: "resources/clair3_model"
 # Analysis parameters
 minq: 9
 run_methylartist: True
+smoothtools:
+    bin: 1000000
+    chunk: 500000
+    spike: 100
+    smooth: 3
 
 # Samples hierarchical structure
 samples:
@@ -21,13 +26,6 @@ samples:
     sample1_tumor:
       pod5: "resources/reads.pod5"
       colour: "#D40000"
-
-# Resource specifications for different steps
-smoothcov:
-    bin: 1000000
-    chunk: 500000
-    spike: 100
-    smooth: 3
 
 # Resource specifications for different steps
 resources:
@@ -50,3 +48,13 @@ resources:
     runtime: 420
     mem_mb: 64000
     threads: 24
+  smoothcov:
+    partition: short
+    threads: 8
+    mem_mb: 18000
+    runtime: 30
+  smoothmods:
+    partition: short
+    threads: 8
+    mem_mb: 18000
+    runtime: 30
