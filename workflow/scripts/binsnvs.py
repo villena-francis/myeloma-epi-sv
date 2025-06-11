@@ -23,13 +23,13 @@ def process_vcf(vcf_file):
                 # Add chromosome, position and filter to list
                 filtered_rows.append((columns[0], int(columns[1]), columns[6]))
     
-    return pd.DataFrame(filtered_rows, columns=['cromosoma', 'posición', 'filter'])
+    return pd.DataFrame(filtered_rows, columns=['chromosome', 'position', 'filter'])
 
 def bin_variants(df, chrom_sizes_df, bin_size):
     """Bin variants based on genomic position"""
     intervals = []
     
-    for chrom, group in df.groupby('cromosoma'):
+    for chrom, group in df.groupby('chromosome'):
         # Get chromosome end position
         chrom_match = chrom_sizes_df.loc[chrom_sizes_df['chr'] == chrom]
         if len(chrom_match) == 0:
@@ -43,7 +43,7 @@ def bin_variants(df, chrom_sizes_df, bin_size):
         end = bin_size
         
         while start <= chrom_end:
-            count = group[(group['posición'] >= start) & (group['posición'] <= end)].shape[0]
+            count = group[(group['position'] >= start) & (group['position'] <= end)].shape[0]
             intervals.append((chrom, start, min(end, chrom_end), count))
             start += bin_size
             end += bin_size
@@ -67,8 +67,10 @@ def main():
     else:
         print("Detected uncompressed VCF file")
     
-    # Load chromosome sizesrmation
-    chrom_sizes_df = pd.read_csv(chrom_sizes_file)
+    # Load chromosome sizes - THIS IS THE MODIFIED PART
+    chrom_sizes_df = pd.read_csv(chrom_sizes_file, sep='\t', header=None, names=['chr', 'end'])
+    # Add start column (always 1)
+    chrom_sizes_df['start'] = 1
     
     # Process VCF file
     variants_df = process_vcf(input_file)
