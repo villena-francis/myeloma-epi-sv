@@ -5,7 +5,7 @@ regions: "resources/regions.bed"
 highlights: "resources/highlights.bed"
 encode_blacklist: "resources/encode_blacklist.bed"
 severus_vntrs: "resources/severus_vntrs.bed"
-chrom_info: "resources/hg38.chrom.sizes"
+chrom_sizes: "resources/hg38.chrom.sizes"
 
 # Tool paths
 dorado_bin: "resources/dorado/bin/dorado"

@@ -25,15 +25,15 @@ def process_vcf(vcf_file):
     
     return pd.DataFrame(filtered_rows, columns=['cromosoma', 'posición', 'filter'])
 
-def bin_variants(df, chrom_info_df, bin_size):
+def bin_variants(df, chrom_sizes_df, bin_size):
     """Bin variants based on genomic position"""
     intervals = []
     
     for chrom, group in df.groupby('cromosoma'):
         # Get chromosome end position
-        chrom_match = chrom_info_df.loc[chrom_info_df['chr'] == chrom]
+        chrom_match = chrom_sizes_df.loc[chrom_sizes_df['chr'] == chrom]
         if len(chrom_match) == 0:
-            print(f"Warning: Chromosome {chrom} not found in chromosome info file")
+            print(f"Warning: Chromosome {chrom} not found in chromosome sizes file")
             continue
             
         chrom_end = chrom_match['end'].values[0]
@@ -57,7 +57,7 @@ def main():
 
     # Get parameters from snakemake.params
     bin_size = snakemake.params.bin
-    chrom_info_file = snakemake.params.chrom_info
+    chrom_sizes_file = snakemake.params.chrom_sizes
     
     print(f"Processing: {input_file}")
     
@@ -67,14 +67,14 @@ def main():
     else:
         print("Detected uncompressed VCF file")
     
-    # Load chromosome information
-    chrom_info_df = pd.read_csv(chrom_info_file)
+    # Load chromosome sizesrmation
+    chrom_sizes_df = pd.read_csv(chrom_sizes_file)
     
     # Process VCF file
     variants_df = process_vcf(input_file)
     
     # Bin variants
-    intervals_df = bin_variants(variants_df, chrom_info_df, bin_size)
+    intervals_df = bin_variants(variants_df, chrom_sizes_df, bin_size)
     
     # Sort chromosomes naturally
     intervals_df['chr'] = pd.Categorical(intervals_df['chr'], 
