@@ -565,7 +565,7 @@ rule binsnvs:
         slurm_partition=get_resource("binsnvs", "partition")
     params:
         bin=config["smoothtools"]["bin"],
-        chrom_info=config["chrom_info"]
+        chrom_sizes=config["chrom_sizes"]
     conda:
         "envs/smoothtools.yaml"
     script:
