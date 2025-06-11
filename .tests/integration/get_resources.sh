@@ -18,7 +18,8 @@ wget -P $PATH_RESOURCES \
     https://zenodo.org/records/15166673/files/reads.pod5 \
     https://zenodo.org/records/15166673/files/sample1_tumor.bam \
     https://zenodo.org/records/15166673/files/human_GRCh38_no_alt_analysis_set.trf.bed \
-    https://zenodo.org/records/15166673/files/regions.bed
+    https://zenodo.org/records/15166673/files/regions.bed \
+    https://zenodo.org/records/15630473/files/hg38.chrom.sizes
 
 # create the empty ENCODE blacklist file
 touch $PATH_RESOURCES/encode_blacklist.bed
