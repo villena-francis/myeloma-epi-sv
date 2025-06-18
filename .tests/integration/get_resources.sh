@@ -29,6 +29,8 @@ touch $PATH_RESOURCES/encode_blacklist.bed
 if [[ "${SKIP_BASECALLING}" != "true" ]]; then
     mkdir -p $PATH_RESOURCES/dorado
     curl -L https://cdn.oxfordnanoportal.com/software/analysis/dorado-0.9.5-linux-x64.tar.gz | tar -xz -C $PATH_RESOURCES/dorado --strip-components=1
+    # Decompress the model file into the same directory
+    tar -xjf $PATH_RESOURCES/dna_r9.4.1_e8_sup@v3.3.tar.bz2 -C $PATH_RESOURCES
 else
     PATH_BASECALL=$PATH_RESULTS/basecall_dorado/sample1
     PATH_QC=$PATH_RESULTS/pycoqc/sample1
