@@ -9,17 +9,17 @@ curl -L https://cdn.oxfordnanoportal.com/software/analysis/models/clair3/r1041_e
 
 # Donwload resources from Zenodo
 wget -P $PATH_RESOURCES \
-    https://zenodo.org/records/15166673/files/severus_vntrs.bed \
-    https://zenodo.org/records/15166673/files/dna_r9.4.1_e8_sup@v3.3.tar.bz2 \
-    https://zenodo.org/records/15166673/files/annotations.gtf.gz \
-    https://zenodo.org/records/15166673/files/ref.fasta.gz \
-    https://zenodo.org/records/15166673/files/annotations.gtf.gz.tbi \
-    https://zenodo.org/records/15166673/files/highlights.bed \
-    https://zenodo.org/records/15166673/files/reads.pod5 \
-    https://zenodo.org/records/15166673/files/sample1_tumor.bam \
-    https://zenodo.org/records/15166673/files/human_GRCh38_no_alt_analysis_set.trf.bed \
-    https://zenodo.org/records/15166673/files/regions.bed \
-    https://zenodo.org/records/15630473/files/hg38.chrom.sizes
+    https://zenodo.org/records/15688873/files/severus_vntrs.bed \
+    https://zenodo.org/records/15688873/files/dna_r9.4.1_e8_sup@v3.3.tar.bz2 \
+    https://zenodo.org/records/15688873/files/annotations.gtf.gz \
+    https://zenodo.org/records/15688873/files/ref.fasta.gz \
+    https://zenodo.org/records/15688873/files/annotations.gtf.gz.tbi \
+    https://zenodo.org/records/15688873/files/highlights.bed \
+    https://zenodo.org/records/15688873/files/reads.pod5 \
+    https://zenodo.org/records/15688873/files/sample1_tumor.bam \
+    https://zenodo.org/records/15688873/files/human_GRCh38_no_alt_analysis_set.trf.bed \
+    https://zenodo.org/records/15688873/files/regions.bed \
+    https://zenodo.org/records/15688873/files/hg38.chrom.sizes
 
 # create the empty ENCODE blacklist file
 touch $PATH_RESOURCES/encode_blacklist.bed
