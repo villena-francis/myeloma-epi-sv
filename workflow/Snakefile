@@ -41,7 +41,8 @@ def input_main(wc):
     if config["run_methylartist"]:
         for patient in config["samples"]:
             for label in regions:
-                o.append(f"results/methylartist/{patient}/{label}.png")
+                for modtype in ["m","h"]:
+                    o.append(f"results/methylartist/{patient}/{label}.{modtype}.png")
     return o
 
 
@@ -326,12 +327,12 @@ rule methylartist:
         ref="results/decompress_ref/ref.fa",
         hl=config["highlights"],
     output:
-        png="results/methylartist/{patient}/{label}.png"
+        png="results/methylartist/{patient}/{label}.{modtype}.png"
     log:
-        o="logs/methylartist/{patient}/{label}.out",
-        e="logs/methylartist/{patient}/{label}.err",
+        o="logs/methylartist/{patient}/{label}.{modtype}.out",
+        e="logs/methylartist/{patient}/{label}.{modtype}.err",
     benchmark:
-        "logs/methylartist/{patient}/{label}.bmk"
+        "logs/methylartist/{patient}/{label}.{modtype}.bmk"
     params:
         reg=get_region,
         bams=get_colored_bams,
@@ -348,7 +349,7 @@ rule methylartist:
                 -g {input.ann} \
                 -p {threads} \
                 -n CG \
-                --mods m \
+                --mods {wildcards.modtype} \
                 --labelgenes \
                 -r {input.ref} \
                 -o {output.png} \
