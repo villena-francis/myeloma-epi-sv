@@ -487,8 +487,6 @@ rule clairs:
         runtime=get_resource("clairs", "runtime"),
         slurm_partition=get_resource("clairs", "partition")
     container: "docker://hkubal/clairs:latest" 
-    conda:
-        "envs/clairs.yaml"
     shell:"""
         run_clairs \
             --tumor_bam_fn /{input.bam_tumour} \
@@ -500,7 +498,8 @@ rule clairs:
             -F /models/r1041_e82_400bps_sup_v420/full_alignment.pkl \
             --clair3_model_path /models/clair3_models/r1041_e82_400bps_sup_v420 \
             --include_all_ctgs \
-            --output_dir $(dirname /{output})
+            --output_dir $(dirname /{output}) \
+            --conda_prefix /opt/conda/envs/clairs
     """
 
 
