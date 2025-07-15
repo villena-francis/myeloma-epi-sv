@@ -38,10 +38,10 @@ def input_main(wc):
 
             if normal and normal != sampleid:
                 o.append(f"results/clairs/{patient}/{sampleid}/output.vcf.gz")
-    if config["run_methylartist"]:
+    if config["methylartist"]["enabled"]:
         for patient in config["samples"]:
             for label in regions:
-                for modtype in ["m","h"]:
+                for modtype in config["methylartist"]["mods"]:
                     o.append(f"results/methylartist/{patient}/{label}.{modtype}.png")
     return o
 

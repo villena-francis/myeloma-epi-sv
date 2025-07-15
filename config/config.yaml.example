@@ -13,7 +13,9 @@ clair3_model: "/path/to/clair3/r1041_e82_400bps_sup_v420"
 
 # Analysis parameters
 minq: 9
-run_methylartist: True
+methylartist:
+  enabled: True
+  mods: ["m", "h"]
 smoothtools:
     bin: 1000000
     chunk: 500000

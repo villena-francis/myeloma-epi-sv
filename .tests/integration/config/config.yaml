@@ -14,7 +14,9 @@ clair3_model: "resources/clair3_model"
 
 # Analysis parameters
 minq: 9
-run_methylartist: True
+methylartist:
+  enabled: True
+  mods: ["m"]
 smoothtools:
     bin: 1000000
     chunk: 500000
