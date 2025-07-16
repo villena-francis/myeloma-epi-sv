@@ -289,8 +289,8 @@ rule decompress_ref:
     input:
         ref=config["ref"],
     output:
-        ref=temp("results/decompress_ref/ref.fa"),
-        idx=temp("results/decompress_ref/ref.fa.fai")
+        ref="results/decompress_ref/ref.fa",
+        idx="results/decompress_ref/ref.fa.fai"
     log:
         "logs/decompress_ref/ref.out",
     conda: "envs/samtools.yaml"
