@@ -656,7 +656,8 @@ rule wakhan:
     input:
         bam_tumour="results/primary/{patient}/{sampleid}.bam",
         ref="results/decompress_ref/ref.fa",
-        severus_dir="results/severus/{patient}/{sampleid}"
+        severus_dir="results/severus/{patient}/{sampleid}",
+        target_genes=config["target_genes"]
     output:
         directory("results/wakhan/{patient}/{sampleid}")
     log:
@@ -672,6 +673,7 @@ rule wakhan:
         vcf_normal_phased=get_vcf_normal_phased,
         cut_threshold=config["wakhan"]["cut_threshold"],
         breakpoints=get_breakpoints,
+        contigs=config["wakhan"]["contigs"]
     conda:
         "envs/wakhan.yaml"
     shell:"""
@@ -684,6 +686,9 @@ rule wakhan:
             --out-dir-plots {output} \
             {params.breakpoints} \
             --cut-threshold {params.cut_threshold} \
+            --user-input-genes {input.target_genes}
+            --contigs {params.contigs}
+            --cpd-internal-segments
             --pdf-enable
     """
 

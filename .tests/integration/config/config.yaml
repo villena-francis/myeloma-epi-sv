@@ -6,6 +6,7 @@ regulatory: "resources/highlights.bed"
 encode_blacklist: "resources/encode_blacklist.bed"
 severus_vntrs: "resources/severus_vntrs.bed"
 chrom_sizes: "resources/hg38.chrom.sizes"
+target_genes: "resources/target_genes.bed"
 
 # Tool paths
 dorado_bin: "resources/dorado/bin/dorado"
@@ -19,6 +20,7 @@ methylartist:
   mods: ["m"]
 wakhan:
     cut_threshold: 50
+    contigs: chr1-22
 smoothtools:
     bin: 1000000
     chunk: 500000
@@ -56,8 +58,8 @@ resources:
     threads: 24
   wakhan:
     partition: main
-    threads: 52
-    mem_mb: 512000
+    threads: 12
+    mem_mb: 24000
     runtime: 240
   smoothcov:
     partition: short
